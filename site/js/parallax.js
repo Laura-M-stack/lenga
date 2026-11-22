@@ -19,7 +19,7 @@ function construirCapas(contenedor) {
   const niebla = { lejos: '<div class="niebla niebla--a" data-deriva="0.10"></div>', medio: '<div class="niebla niebla--b" data-deriva="0.2"></div>' };
   contenedor.innerHTML = capas
     .map((c) => {
-      const svg = `<svg class="capa capa--${c.id}" data-capa="${c.id}" viewBox="0 0 ${ANCHO} ${ALTO}" preserveAspectRatio="xMidYMax slice" focusable="false">${c.paths.map((d) => `<path d="${d}"/>`).join('')}${c.caras ? `<path class="cara" d="${c.caras}"/>` : ''}${c.nieve ? `<path class="nieve" d="${c.nieve}"/>` : ''}${c.extra}</svg>`;
+      const svg = `<svg class="capa capa--${c.id}" data-capa="${c.id}" viewBox="0 0 ${ANCHO} ${ALTO}" preserveAspectRatio="xMidYMax slice" focusable="false">${c.paths.map((d) => `<path d="${d}"/>`).join('')}${c.caras ? `<clipPath id="recorte-${c.id}"><path d="${c.paths[0]}"/></clipPath><path class="cara" clip-path="url(#recorte-${c.id})" d="${c.caras}"/>` : ''}${c.nieve ? `<path class="nieve" d="${c.nieve}"/>` : ''}${c.extra}</svg>`;
       return svg + (niebla[c.id] ?? '');
     })
     .join('');

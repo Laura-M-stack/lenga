@@ -43,7 +43,7 @@ export function paleta(p) {
   out.otonoBrillo = mezclarHex(out.otonoLuz, '#ffd27a', 0.55 * dia);
   out.otonoSombra = mezclarHex(out.otono, '#0a0508', 0.42);
   out.lejosSombra = mezclarHex(out.lejos, '#0a1020', 0.34);
-  out.medioSombra = mezclarHex(out.medio, '#0a1020', 0.36);
+  out.medioSombra = mezclarHex(out.medio, '#0a1020', 0.2);
   return out;
 }
 

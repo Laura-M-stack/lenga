@@ -146,14 +146,13 @@ test('cada rama tiene forma propia (no se repite la misma silueta)', () => {
   assert.equal(new Set(pisos).size, pisos.length);
 });
 
-test('las lengas llevan tronco, matas lobuladas y algunas son de otoño; sin latifoliados no hay lengas', () => {
+test('las lengas llevan tronco, follaje en pisos de matas curvas, todas verdes; sin latifoliados no hay lengas', () => {
   const con = arboles({ seed: 4, cantidad: 10, latifoliados: 0.5, id: 'm' });
-  assert.match(con, /<g id="m-l0">/);
-  assert.match(con, /class="tronco o"/);
-  assert.match(con, /class="c o"/);
-  assert.match(con, /class="luz o"/);
-  assert.match(con, /class="sombra o"/);
-  assert.match(con, /<g id="m-l1"><path class="tronco"/);
+  for (let k = 0; k < 4; k++) assert.match(con, new RegExp(`<g id="m-l${k}"><path class="tronco"`));
+  const g = con.match(/<g id="m-l0">(.*?)<\/g>/)[1];
+  assert.ok((g.match(/class="c"/g) ?? []).length >= 15, 'muchas matas');
+  assert.doesNotMatch(con, / o"/, 'sin follaje de otoño');
+  assert.doesNotMatch(g, / L|NaN|undefined/);
   assert.doesNotMatch(arboles({ seed: 4, cantidad: 10, id: 'm2' }), /<g id="m2-l\d/);
 });
 
