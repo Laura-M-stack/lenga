@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cordillera, nieve, pinos, cabana, capasEscena, ANCHO, ALTO } from '../site/js/paisaje.js';
+import { cordillera, nieve, caras, pinos, arbolesSvg, cabana, capasEscena, ANCHO, ALTO } from '../site/js/paisaje.js';
 
 function numeros(d) {
   return [...d.matchAll(/-?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
@@ -94,4 +94,39 @@ test('las cuatro capas de la escena, de lejos a cerca', () => {
   assert.match(capas[3].extra, /cabana/);
   assert.ok(capas[0].nieve.length > 0, 'la cordillera lejana lleva nieve');
   for (const c of capas) if (c.nieve) dentro(c.nieve);
+  for (const c of capas) if (c.caras) dentro(c.caras);
+  assert.ok(capas[0].caras.length > 0 && capas[1].caras.length > 0, 'las montañas tienen pliegues en sombra');
+  for (const id of [2, 3]) assert.match(capas[id].extra, /class="luz"[\s\S]*class="sombra"/, 'los árboles llevan luz y sombra');
+});
+
+test('los pliegues de las montañas son deterministas, cerrados y dentro del cuadro', () => {
+  const o = { seed: 23, base: 0.26, amplitud: 0.34, rugosidad: 0.58 };
+  const d = caras(o);
+  assert.ok(d.length > 0);
+  assert.equal(d, caras(o));
+  assert.doesNotMatch(d, /NaN|undefined|L Z|L L/);
+  dentro(d);
+  assert.equal((d.match(/M/g) ?? []).length, (d.match(/Z/g) ?? []).length);
+  for (const seed of [1, 2, 3, 99, 4321]) {
+    const c = caras({ seed, base: 0.3, amplitud: 0.4 });
+    assert.doesNotMatch(c, /NaN|undefined/);
+    if (c) dentro(c);
+  }
+});
+
+test('arbolesSvg: cada árbol trae cuerpo, luz y sombra, ordenados del fondo al frente, dentro del cuadro', () => {
+  const svg = arbolesSvg({ seed: 7, cantidad: 25, latifoliados: 0.3 });
+  assert.equal((svg.match(/class="luz"/g) ?? []).length, 25);
+  assert.equal((svg.match(/class="sombra"/g) ?? []).length, 25);
+  assert.doesNotMatch(svg, /NaN|undefined|Infinity/);
+  for (const m of svg.matchAll(/ d="([^"]+)"/g)) dentro(m[1]);
+  assert.equal(svg, arbolesSvg({ seed: 7, cantidad: 25, latifoliados: 0.3 }));
+  assert.ok(arbolesSvg({ seed: 7, cantidad: 0 }).includes('<path'));
+});
+
+test('las coníferas tienen luz y sombra distintas entre sí (volumen)', () => {
+  const svg = arbolesSvg({ seed: 3, cantidad: 3 });
+  const luz = [...svg.matchAll(/class="luz" d="([^"]+)"/g)].map((m) => m[1]);
+  const sombra = [...svg.matchAll(/class="sombra" d="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(luz.every((d, i) => d !== sombra[i] && d.length > 100));
 });

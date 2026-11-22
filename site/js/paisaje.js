@@ -95,9 +95,51 @@ export function nieve(opts, { linea = 0.7 } = {}) {
   return d;
 }
 
+/** Pliegues de sombra en la ladera derecha de cada pico (la luz viene de la izquierda): le dan volumen a la montaña. */
+export function caras(opts) {
+  const o = { ...DEF_CORDILLERA, ...opts };
+  const pts = crestas(o);
+  const rnd = mulberry32((o.seed ?? 0) + 104729);
+  const ventana = 5;
+  let d = '';
+  for (let i = ventana; i < pts.length - ventana - 1; i++) {
+    const y = pts[i][1];
+    let pico = true;
+    for (let k = i - ventana; k <= i + ventana; k++) {
+      if (pts[k][1] < y) {
+        pico = false;
+        break;
+      }
+    }
+    if (!pico) continue;
+    let v = i;
+    while (v + 1 < pts.length - 1 && pts[v + 1][1] >= pts[v][1] && v - i < 40) v++;
+    const [xp, yp] = pts[i];
+    const [xv, yv] = pts[v];
+    const dx = xv - xp;
+    const dy = yv - yp;
+    if (v - i < 4 || dy < 12) {
+      i = Math.max(i, v);
+      continue;
+    }
+    const arista = [
+      [xv - dx * 0.08, yv + dy * 0.3],
+      [xp + dx * (0.35 + rnd() * 0.1), yp + dy * (0.62 + rnd() * 0.1)],
+      [xp + dx * (0.14 + rnd() * 0.06), yp + dy * (0.3 + rnd() * 0.1)],
+    ];
+    const todo = [...pts.slice(i, v + 1), ...arista].map(([x, yy]) => `${f(lim(x, o.ancho))},${f(lim(yy, o.alto))}`);
+    d += `${d ? ' ' : ''}M${todo.join(' L')} Z`;
+    i = v;
+  }
+  return d;
+}
+
+const poli = (pts) => `M${pts.map(([x, y]) => `${f(x)},${f(y)}`).join(' L')} Z`;
+
 /**
  * Conífera de silueta natural: pisos de ramas que caen, de largo irregular, un poco inclinada y con tronco a la vista.
- * Un solo trazo cerrado, sentido horario (así no se cancela al superponerse con otros árboles).
+ * Devuelve el cuerpo (un solo trazo cerrado, sentido horario), las caras iluminadas de las ramas (izquierda, de donde
+ * viene la luz) y las caras en sombra (derecha).
  */
 function conifera(rnd, x, base, H, W, ancho, alto) {
   const pisos = 6 + Math.floor(rnd() * 4);
@@ -108,74 +150,104 @@ function conifera(rnd, x, base, H, W, ancho, alto) {
   const cima = base - H;
   const inclina = (rnd() - 0.5) * H * 0.07;
   const cx = (y) => x + inclina * ((base - y) / H);
-  const P = (px, py) => `${f(lim(px, ancho))},${f(lim(py, alto))}`;
-  const lado = (s) => {
-    const out = [];
+  const c = ([px, py]) => [lim(px, ancho), lim(py, alto)];
+  const lado = (sgn) => {
+    const tiers = [];
     for (let i = 0; i < pisos; i++) {
       const y = cima + i * paso;
       const w = (W / 2) * Math.pow((i + 1) / pisos, 0.85) * (0.78 + rnd() * 0.44);
-      const ax = s * w * (0.28 + rnd() * 0.14);
+      const ax = sgn * w * (0.28 + rnd() * 0.14);
       const ay = y + paso * 0.08;
-      const bx = s * w;
+      const bx = sgn * w;
       const by = y + paso * (1.12 + rnd() * 0.32);
       const mx = ax + (bx - ax) * (0.45 + rnd() * 0.15);
       const my = ay + (by - ay) * 0.45 - paso * (0.04 + rnd() * 0.08);
-      out.push([ax, ay], [mx, my], [bx, by]);
+      tiers.push([[ax, ay], [mx, my], [bx, by]].map(([dx, py]) => c([cx(py) + dx, py])));
     }
-    return out.map(([dx, py]) => [cx(py) + dx, py]);
+    return tiers;
   };
   const der = lado(1);
   const izq = lado(-1);
   const yT = base - tronco;
-  const pts = [
-    P(cx(cima), cima),
-    ...der.map(([px, py]) => P(px, py)),
-    P(cx(yT) + grosor, yT),
-    P(cx(base) + grosor, base),
-    P(cx(base) - grosor, base),
-    P(cx(yT) - grosor, yT),
-    ...izq.reverse().map(([px, py]) => P(px, py)),
+  const contorno = [
+    c([cx(cima), cima]),
+    ...der.flat(),
+    c([cx(yT) + grosor, yT]),
+    c([cx(base) + grosor, base]),
+    c([cx(base) - grosor, base]),
+    c([cx(yT) - grosor, yT]),
+    ...izq.flat().reverse(),
   ];
-  return `M${pts.join(' L')} Z`;
+  // Cuña sobre la cara superior de cada rama: del borde exterior hacia adentro
+  const cuna = ([A, M, B]) => {
+    const hacia = (P, k, dy) => [cx(P[1]) + (P[0] - cx(P[1])) * k, P[1] + dy];
+    return poli([A, M, B, hacia(B, 0.5, -paso * 0.42), hacia(A, 0.5, paso * 0.35)]);
+  };
+  return { c: poli(contorno), l: izq.map(cuna).join(' '), s: der.map(cuna).join(' ') };
 }
 
-/** Lenga u otro árbol de hoja ancha: copa redonda e irregular sobre un tronco que se bifurca. Sentido horario. */
+/** Lenga u otro árbol de hoja ancha: copa redonda e irregular sobre un tronco que se bifurca. Misma convención que `conifera`. */
 function latifoliado(rnd, x, base, H, W, ancho, alto) {
-  const P = (px, py) => `${f(lim(px, ancho))},${f(lim(py, alto))}`;
+  const cl = ([px, py]) => [lim(px, ancho), lim(py, alto)];
   const cy = base - H * 0.62;
   const rx = W * 0.62;
   const ry = H * 0.4;
   const f1 = rnd() * 6.28;
   const f2 = rnd() * 6.28;
   const n = 26;
-  const copa = [];
+  const radios = [];
   for (let k = 0; k < n; k++) {
     const a = (k / n) * Math.PI * 2;
-    const r = 1 + 0.12 * Math.sin(3 * a + f1) + 0.07 * Math.sin(7 * a + f2) + (rnd() - 0.5) * 0.1;
-    copa.push(P(x + Math.cos(a) * rx * r, cy + Math.sin(a) * ry * r));
+    radios.push(1 + 0.12 * Math.sin(3 * a + f1) + 0.07 * Math.sin(7 * a + f2) + (rnd() - 0.5) * 0.1);
   }
+  const punto = (k, escala, dx, dy) => {
+    const a = (k / n) * Math.PI * 2;
+    return cl([x + Math.cos(a) * rx * radios[k % n] * escala + dx, cy + Math.sin(a) * ry * radios[k % n] * escala + dy]);
+  };
+  const copa = Array.from({ length: n }, (_, k) => punto(k, 1, 0, 0));
   const tw = Math.max(1.6, H * 0.03);
-  const tronco = [P(x - tw, base), P(x - tw * 0.55, cy + ry * 0.4), P(x + tw * 0.55, cy + ry * 0.4), P(x + tw, base)];
-  return `M${copa.join(' L')} Z M${tronco.join(' L')} Z`;
+  const tronco = [cl([x - tw, base]), cl([x - tw * 0.55, cy + ry * 0.4]), cl([x + tw * 0.55, cy + ry * 0.4]), cl([x + tw, base])];
+  // media luna iluminada arriba a la izquierda (ángulos ~190° a 290°) y en sombra abajo a la derecha (~10° a 110°)
+  const luna = (desde, hasta, escala, dx, dy) => {
+    const ks = [];
+    for (let k = Math.round((desde / 360) * n); k <= Math.round((hasta / 360) * n); k++) ks.push(k);
+    return poli([...ks.map((k) => punto(k, 1, 0, 0)), ...ks.reverse().map((k) => punto(k, escala, dx, dy))]);
+  };
+  return {
+    c: `${poli(copa)} ${poli(tronco)}`,
+    l: luna(190, 290, 0.55, -rx * 0.1, -ry * 0.1),
+    s: luna(10, 120, 0.6, rx * 0.06, ry * 0.08),
+  };
 }
 
-/**
- * Hilera de árboles sobre una franja de suelo. Casi todos coníferas; `latifoliados` es la fracción de árboles de copa
- * redonda (lengas) mezclados entre ellas. Cada árbol tiene su altura, su ancho, su inclinación y su profundidad.
- */
-export function pinos({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin = 120, hMax = 260, suelo = 0.05, latifoliados = 0 }) {
+function generarArboles({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin = 120, hMax = 260, suelo = 0.05, latifoliados = 0 }) {
   const rnd = mulberry32(seed);
   const g = alto * suelo;
   const yb = alto - g;
   const xs = Array.from({ length: cantidad }, () => rnd() * ancho).sort((a, b) => a - b);
-  let d = `M0,${alto} L0,${f(yb)} L${ancho},${f(yb)} L${ancho},${alto} Z`;
-  for (const x of xs) {
+  const lista = xs.map((x) => {
     const H = hMin + Math.pow(rnd(), 1.4) * (hMax - hMin);
     const ancla = yb + rnd() * g * 0.6; // los de atrás se ven más bajos: la base se esconde en el suelo
-    if (rnd() < latifoliados) d += ' ' + latifoliado(rnd, x, ancla, H * 0.8, H * (0.42 + rnd() * 0.12), ancho, alto);
-    else d += ' ' + conifera(rnd, x, ancla, H, H * (0.28 + rnd() * 0.1), ancho, alto);
-  }
-  return d;
+    const t = rnd() < latifoliados ? latifoliado(rnd, x, ancla, H * 0.8, H * (0.42 + rnd() * 0.12), ancho, alto) : conifera(rnd, x, ancla, H, H * (0.28 + rnd() * 0.1), ancho, alto);
+    return { ...t, z: ancla };
+  });
+  lista.sort((a, b) => a.z - b.z); // los más lejanos primero, para que los de adelante los tapen
+  return { suelo: `M0,${alto} L0,${f(yb)} L${ancho},${f(yb)} L${ancho},${alto} Z`, lista };
+}
+
+/**
+ * Hilera de árboles sobre una franja de suelo, solo la silueta. Casi todos coníferas; `latifoliados` es la fracción de
+ * árboles de copa redonda (lengas). Cada árbol tiene su altura, su ancho, su inclinación y su profundidad.
+ */
+export function pinos(opts) {
+  const { suelo, lista } = generarArboles(opts);
+  return [suelo, ...lista.map((t) => t.c)].join(' ');
+}
+
+/** Lo mismo que `pinos`, como markup SVG con luces y sombras por árbol (en orden de profundidad). */
+export function arbolesSvg(opts) {
+  const { suelo, lista } = generarArboles(opts);
+  return `<path d="${suelo}"/>` + lista.map((t) => `<path d="${t.c}"/><path class="luz" d="${t.l}"/><path class="sombra" d="${t.s}"/>`).join('');
 }
 
 /** Cabaña de troncos para el primer plano (markup SVG; los colores salen de variables CSS). */
@@ -184,41 +256,70 @@ export function cabana(x, yBase) {
   const h = 120;
   const l = x - w / 2;
   const t = yBase - h;
+  const cuerpoH = h - 12;
   const vetas = Array.from({ length: 6 }, (_, i) => `<rect class="cabana__veta" x="${l}" y="${f(t + 16 + i * 17)}" width="${w}" height="2.5"/>`).join('');
-  const puntas = Array.from({ length: 6 }, (_, i) => `<rect class="cabana__veta" x="${l - 5}" y="${f(t + 8 + i * 17)}" width="10" height="7" rx="3"/><rect class="cabana__veta" x="${l + w - 5}" y="${f(t + 8 + i * 17)}" width="10" height="7" rx="3"/>`).join('');
+  const puntas = Array.from({ length: 6 }, (_, i) => `<rect class="cabana__punta" x="${l - 5}" y="${f(t + 8 + i * 17)}" width="10" height="9" rx="4"/><rect class="cabana__punta" x="${l + w - 5}" y="${f(t + 8 + i * 17)}" width="10" height="9" rx="4"/>`).join('');
+  // tejas: hileras de listones que siguen el ancho del techo en cada altura
+  const apice = t - 80;
+  const semi = w / 2 + 14;
+  const tejas = Array.from({ length: 7 }, (_, i) => {
+    const y = apice + 14 + i * 10;
+    const mitad = (semi * (y - apice)) / 83;
+    return `<rect class="cabana__teja" x="${f(x - mitad + 3)}" y="${f(y)}" width="${f(Math.max(0, mitad * 2 - 6))}" height="1.8"/>`;
+  }).join('');
+  const lenia = [0, 1, 2].map((fila) => Array.from({ length: 4 - fila }, (_, k) => `<circle class="cabana__lenia" cx="${f(l - 34 + fila * 6 + k * 11)}" cy="${f(yBase - 5 - fila * 9)}" r="5.2"/>`).join('')).join('');
+  const hx = l + w * 0.68 + 13;
   return [
     `<g class="cabana" aria-hidden="true">`,
+    `<ellipse class="cabana__pozo" cx="${f(l + 66)}" cy="${f(yBase + 1)}" rx="86" ry="9"/>`,
     `<rect class="cabana__chimenea" x="${l + w * 0.68}" y="${t - 64}" width="26" height="70"/>`,
-    `<rect class="cabana__techo" x="${l + w * 0.68 - 4}" y="${t - 70}" width="34" height="8"/>`,
+    `<rect class="cabana__remate" x="${l + w * 0.68 - 4}" y="${t - 70}" width="34" height="8"/>`,
+    `<g class="humo"><ellipse class="humo__bola" cx="${f(hx)}" cy="${t - 76}" rx="9" ry="7"/><ellipse class="humo__bola humo__bola--2" cx="${f(hx)}" cy="${t - 76}" rx="9" ry="7"/><ellipse class="humo__bola humo__bola--3" cx="${f(hx)}" cy="${t - 76}" rx="9" ry="7"/></g>`,
     `<rect class="cabana__base" x="${l - 6}" y="${yBase - 12}" width="${w + 12}" height="14"/>`,
-    `<rect class="cabana__cuerpo" x="${l}" y="${t}" width="${w}" height="${h - 12}"/>`,
+    `<rect class="cabana__cuerpo" x="${l}" y="${t}" width="${w}" height="${cuerpoH}"/>`,
     vetas,
     puntas,
-    `<path class="cabana__techo" d="M${l - 26},${t + 10} L${l - 14},${t + 3} L${x},${t - 80} L${l + w + 14},${t + 3} L${l + w + 26},${t + 10} Z"/>`,
+    `<path class="cabana__techo" d="M${l - 26},${t + 10} L${l - 14},${t + 3} L${x},${apice} L${l + w + 14},${t + 3} L${l + w + 26},${t + 10} Z"/>`,
+    tejas,
+    `<path class="cabana__borde" d="M${l - 26},${t + 10} L${l - 14},${t + 3} L${x},${apice}"/>`,
     `<rect class="cabana__ventana-base" x="${l + 34}" y="${t + 34}" width="62" height="50"/>`,
     `<rect class="cabana__ventana" x="${l + 34}" y="${t + 34}" width="62" height="50"/>`,
     `<rect class="cabana__marco" x="${l + 63}" y="${t + 34}" width="4" height="50"/>`,
     `<rect class="cabana__marco" x="${l + 34}" y="${t + 57}" width="62" height="4"/>`,
+    `<rect class="cabana__marco" x="${l + 30}" y="${t + 84}" width="70" height="5"/>`,
     `<rect class="cabana__puerta" x="${l + 138}" y="${t + 38}" width="46" height="${h - 50}"/>`,
+    `<circle class="cabana__farol" cx="${l + 196}" cy="${t + 50}" r="4"/>`,
     `<rect class="cabana__deck" x="${l + 120}" y="${yBase - 16}" width="82" height="6"/>`,
     `<rect class="cabana__deck" x="${l + 124}" y="${yBase - 12}" width="5" height="12"/>`,
     `<rect class="cabana__deck" x="${l + 192}" y="${yBase - 12}" width="5" height="12"/>`,
+    lenia,
     `</g>`,
   ].join('');
 }
 
-/** Las cuatro capas de la escena, de la más lejana a la más cercana. `nieve` va en un color propio, encima de la capa. */
+/**
+ * Las cuatro capas de la escena, de la más lejana a la más cercana.
+ * `caras` son los pliegues en sombra de la montaña, `nieve` va en un color propio, `extra` es markup ya armado (árboles y cabaña).
+ */
 export function capasEscena() {
   const lejos = { seed: 11, base: 0.42, amplitud: 0.4, rugosidad: 0.62 };
+  const medio = { seed: 23, base: 0.26, amplitud: 0.34, rugosidad: 0.58 };
   return [
-    { id: 'lejos', paths: [cordillera(lejos)], nieve: nieve(lejos), extra: '' },
-    { id: 'medio', paths: [cordillera({ seed: 23, base: 0.26, amplitud: 0.34, rugosidad: 0.58 })], nieve: '', extra: '' },
+    { id: 'lejos', paths: [cordillera(lejos)], caras: caras(lejos), nieve: nieve(lejos), extra: '' },
+    { id: 'medio', paths: [cordillera(medio)], caras: caras(medio), nieve: '', extra: '' },
     {
       id: 'bosque',
-      paths: [cordillera({ seed: 37, base: 0.1, amplitud: 0.16, rugosidad: 0.5 }), pinos({ seed: 41, cantidad: 130, hMin: 90, hMax: 210, latifoliados: 0.14 })],
+      paths: [cordillera({ seed: 37, base: 0.1, amplitud: 0.16, rugosidad: 0.5 })],
+      caras: '',
       nieve: '',
-      extra: '',
+      extra: arbolesSvg({ seed: 41, cantidad: 130, hMin: 90, hMax: 210, latifoliados: 0.14 }),
     },
-    { id: 'frente', paths: [pinos({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, latifoliados: 0.05 })], nieve: '', extra: cabana(1450, ALTO * 0.93) },
+    {
+      id: 'frente',
+      paths: [],
+      caras: '',
+      nieve: '',
+      extra: arbolesSvg({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, latifoliados: 0.05 }) + cabana(1450, ALTO * 0.93),
+    },
   ];
 }

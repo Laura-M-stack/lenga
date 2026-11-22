@@ -15,7 +15,7 @@ test('mezclarHex en los extremos y en el medio', () => {
 test('la paleta siempre devuelve hex válidos, incluso con valores raros', () => {
   for (const p of [-1, 0, 0.1, 0.35, 0.5, 0.7, 0.99, 1, 2, NaN, undefined]) {
     const pal = paleta(p);
-    assert.deepEqual(Object.keys(pal).sort(), ['bosque', 'cielo1', 'cielo2', 'frente', 'lejos', 'medio', 'nieve']);
+    assert.deepEqual(Object.keys(pal).sort(), ['borde', 'bosque', 'bosqueLuz', 'bosqueSombra', 'cielo1', 'cielo2', 'cuerpo', 'frente', 'frenteLuz', 'frenteSombra', 'lejos', 'lejosSombra', 'medio', 'medioSombra', 'nieve', 'techo']);
     for (const v of Object.values(pal)) assert.match(v, HEX, `p=${p}`);
   }
 });
@@ -64,4 +64,16 @@ test('fase: cada texto vive en su tramo y no hay dos a la vez en el medio de cad
   assert.equal(fase(0.5, 0, 0.3).op, 0);
   assert.equal(Object.is(fase(0.15, 0, 0.3).y, -0), false);
   assert.ok(fase(0.2, 0.38, 0.64).y > 0 && fase(0.7, 0.38, 0.64).y < 0); // entra desde abajo, sale hacia arriba
+});
+
+test('luces y sombras de los árboles: la luz siempre es más clara que la sombra y el techo se distingue de los árboles', () => {
+  const lum = (h) => [1, 3, 5].reduce((t, i) => t + parseInt(h.slice(i, i + 2), 16), 0);
+  for (const p of [0, 0.2, 0.35, 0.5, 0.7, 0.85, 1]) {
+    const pal = paleta(p);
+    assert.ok(lum(pal.bosqueLuz) > lum(pal.bosque) && lum(pal.bosque) > lum(pal.bosqueSombra), `bosque p=${p}`);
+    assert.ok(lum(pal.frenteLuz) > lum(pal.frente) && lum(pal.frente) > lum(pal.frenteSombra), `frente p=${p}`);
+    assert.ok(lum(pal.lejosSombra) < lum(pal.lejos), `lejos p=${p}`);
+    assert.ok(lum(pal.techo) > lum(pal.frente), `el techo es más claro que los árboles del frente, p=${p}`);
+    assert.ok(lum(pal.nieve) > lum(pal.lejos), `la nieve es más clara que la montaña, p=${p}`);
+  }
 });

@@ -6,10 +6,10 @@ const suave = (t) => {
 };
 
 const CLAVES = [
-  { p: 0, cielo1: '#4d5d8f', cielo2: '#f2b27f', lejos: '#9094b6', nieve: '#e0d6e8', medio: '#6f7699', bosque: '#3d5b57', frente: '#1c382e' },
-  { p: 0.35, cielo1: '#4f9bd8', cielo2: '#d3ebf7', lejos: '#9ab8d0', nieve: '#f4f8fb', medio: '#6f9ba0', bosque: '#2f6b4c', frente: '#1d4a35' },
-  { p: 0.7, cielo1: '#353a78', cielo2: '#ee8450', lejos: '#7c6c98', nieve: '#f0b69a', medio: '#56547c', bosque: '#2d4a4b', frente: '#152e28' },
-  { p: 1, cielo1: '#09111f', cielo2: '#22314f', lejos: '#2a3556', nieve: '#4a5a80', medio: '#1d2946', bosque: '#14243a', frente: '#0a1820' },
+  { p: 0, cielo1: '#4d5d8f', cielo2: '#f2b27f', lejos: '#9094b6', nieve: '#e0d6e8', cuerpo: '#6e4f45', techo: '#58403e', borde: '#e3a986', medio: '#6f7699', bosque: '#3d5b57', frente: '#1c382e' },
+  { p: 0.35, cielo1: '#4f9bd8', cielo2: '#d3ebf7', lejos: '#9ab8d0', nieve: '#f4f8fb', cuerpo: '#7b5232', techo: '#6b3d2a', borde: '#c58a5c', medio: '#6f9ba0', bosque: '#2f6b4c', frente: '#1d4a35' },
+  { p: 0.7, cielo1: '#353a78', cielo2: '#ee8450', lejos: '#7c6c98', nieve: '#f0b69a', cuerpo: '#5d3d37', techo: '#4d3036', borde: '#f2a46c', medio: '#56547c', bosque: '#2d4a4b', frente: '#152e28' },
+  { p: 1, cielo1: '#09111f', cielo2: '#22314f', lejos: '#2a3556', nieve: '#4a5a80', cuerpo: '#2a2024', techo: '#2a2230', borde: '#5d6f9c', medio: '#1d2946', bosque: '#14243a', frente: '#0a1820' },
 ];
 
 const aRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -31,6 +31,13 @@ export function paleta(p) {
   const t = (q - a.p) / (b.p - a.p);
   const out = {};
   for (const k of Object.keys(a)) if (k !== 'p') out[k] = mezclarHex(a[k], b[k], t);
+  // Luces y sombras derivadas: la luz de las ramas toma el color del cielo (rosado al alba, anaranjado al atardecer, azul de noche)
+  out.bosqueLuz = mezclarHex(out.bosque, out.cielo2, 0.3);
+  out.bosqueSombra = mezclarHex(out.bosque, '#04070b', 0.4);
+  out.frenteLuz = mezclarHex(out.frente, out.cielo2, 0.2);
+  out.frenteSombra = mezclarHex(out.frente, '#04070b', 0.42);
+  out.lejosSombra = mezclarHex(out.lejos, '#0a1020', 0.34);
+  out.medioSombra = mezclarHex(out.medio, '#0a1020', 0.36);
   return out;
 }
 

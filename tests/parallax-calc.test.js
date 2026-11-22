@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { progresoPista, escalaCapa, subidaCapa, factorPantalla, desplazamiento, visible, derivaX } from '../site/js/parallax-calc.js';
+import { progresoPista, escalaCapa, subidaCapa, factorPantalla, desplazamiento, visible, derivaX, posicionAve, corrimientoPuntero, coberturaX } from '../site/js/parallax-calc.js';
 
 test('progreso de la pista: 0 antes, 1 después, lineal en el medio', () => {
   const alturaEscena = 800;
@@ -63,4 +63,38 @@ test('deriva horizontal: siempre dentro de un ciclo, nunca positiva', () => {
   }
   assert.equal(derivaX(100, 0.1, 0), 0);
   assert.equal(derivaX(NaN, 0.1, 1200), 0);
+});
+
+test('pájaros: cruzan el cielo, están dentro del rango y se van al caer la tarde', () => {
+  for (let i = 0; i < 4; i++) {
+    for (const p of [0, 0.1, 0.3, 0.5, 0.6, 0.8, 1, -1, 2, NaN]) {
+      const a = posicionAve(p, i);
+      assert.ok(a.x >= -10 && a.x <= 110, `x=${a.x}`);
+      assert.ok(a.y > 5 && a.y < 45, `y=${a.y}`);
+      assert.ok(a.op >= 0 && a.op <= 1);
+      assert.ok(Object.values(a).every(Number.isFinite));
+    }
+    assert.equal(posicionAve(0.3, i).op, 1);
+    assert.equal(posicionAve(0.9, i).op, 0);
+  }
+  assert.notEqual(posicionAve(0.2, 0).x, posicionAve(0.2, 1).x);
+  assert.ok(posicionAve(0.3, 0).x !== posicionAve(0.1, 0).x, 'se mueven con el scroll');
+});
+
+test('puntero: corrimiento proporcional, limitado y sin -0', () => {
+  assert.equal(corrimientoPuntero(0, 40), 0);
+  assert.equal(Object.is(corrimientoPuntero(-0, 40), -0), false);
+  assert.equal(corrimientoPuntero(0.5, 40), 20);
+  assert.equal(corrimientoPuntero(-1, 40), -40);
+  assert.equal(corrimientoPuntero(5, 40), 40);
+  assert.equal(corrimientoPuntero(NaN, 40), 0);
+  assert.equal(corrimientoPuntero(undefined, 40), 0);
+});
+
+test('cobertura: el zoom extra tapa justo el corrimiento máximo', () => {
+  assert.equal(coberturaX(0, 1440), 1);
+  assert.equal(coberturaX(40, 0), 1);
+  const k = coberturaX(46, 1440);
+  assert.ok(k > 1 && k < 1.1);
+  assert.ok(Math.abs((k - 1) * 720 - 46) < 1e-9);
 });

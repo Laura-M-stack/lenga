@@ -43,3 +43,27 @@ export function derivaX(scrollY, velocidad, ciclo) {
   const x = -(scrollY * velocidad) % ciclo;
   return (x > 0 ? x - ciclo : x) + 0;
 }
+
+const suave01 = (x) => clamp01(x);
+
+/**
+ * Posición de un pájaro (en % del escenario) según el progreso. Cruzan el cielo de izquierda a derecha de día
+ * y se van perdiendo al caer la tarde.
+ */
+export function posicionAve(p, i) {
+  const q = clamp01(Number.isFinite(p) ? p : 0);
+  const x = ((8 + i * 27 + q * (70 + i * 18)) % 120) - 10;
+  const y = 12 + ((i * 13) % 24) + 3 * Math.sin(q * 11 + i * 2);
+  return { x: x + 0, y, op: suave01((0.6 - q) / 0.12) };
+}
+
+/** Corrimiento horizontal (px) de una capa según la posición del puntero (nx de -1 a 1), limitado a ±amp. */
+export function corrimientoPuntero(nx, amp) {
+  const n = Number.isFinite(nx) ? nx : 0;
+  return Math.max(-amp, Math.min(amp, n * amp)) + 0;
+}
+
+/** Zoom mínimo para que el corrimiento del puntero no deje un hueco en los bordes. */
+export function coberturaX(amp, ancho) {
+  return ancho > 0 && amp > 0 ? 1 + amp / (ancho / 2) : 1;
+}
