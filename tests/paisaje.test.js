@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cordillera, nieve, caras, pinos, arbolesSvg, cabana, capasEscena, ANCHO, ALTO } from '../site/js/paisaje.js';
+import { cordillera, nieve, caras, arboles, cabana, capasEscena, ANCHO, ALTO } from '../site/js/paisaje.js';
 
 function numeros(d) {
   return [...d.matchAll(/-?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
@@ -27,39 +27,6 @@ test('la cordillera es un camino cerrado y no se sale del cuadro', () => {
     assert.doesNotMatch(d, /NaN|undefined|Infinity/);
     dentro(d);
   }
-});
-
-test('los árboles son deterministas y quedan dentro del cuadro', () => {
-  const d = pinos({ seed: 3, cantidad: 30 });
-  assert.equal(d, pinos({ seed: 3, cantidad: 30 }));
-  assert.notEqual(d, pinos({ seed: 4, cantidad: 30 }));
-  assert.doesNotMatch(d, /NaN|undefined|Infinity/);
-  dentro(d);
-  assert.equal((d.match(/Z/g) ?? []).length, 1 + 30); // el suelo más un trazo por conífera
-  dentro(pinos({ seed: 9, cantidad: 0 }));
-});
-
-test('las coníferas no son triángulos: tienen muchos puntos y cada una es distinta', () => {
-  const uno = pinos({ seed: 8, cantidad: 1 }).split(' Z ')[1] ?? pinos({ seed: 8, cantidad: 1 });
-  assert.ok((uno.match(/L/g) ?? []).length > 40, 'una conífera tiene decenas de puntos');
-  const alturas = new Set();
-  for (let s = 1; s <= 12; s++) alturas.add(pinos({ seed: s, cantidad: 1 }).length);
-  assert.ok(alturas.size > 8, 'no se repite la misma silueta');
-});
-
-test('con latifoliados aparecen copas redondas (copa y tronco) y todo queda dentro del cuadro', () => {
-  const solo = pinos({ seed: 5, cantidad: 40, latifoliados: 1 });
-  assert.equal((solo.match(/Z/g) ?? []).length, 1 + 40 * 2);
-  dentro(solo);
-  const mezcla = pinos({ seed: 5, cantidad: 80, latifoliados: 0.2 });
-  const z = (mezcla.match(/Z/g) ?? []).length;
-  assert.ok(z > 1 + 80 && z < 1 + 160, `z=${z}`);
-  dentro(mezcla);
-  assert.doesNotMatch(mezcla, /NaN|undefined/);
-});
-
-test('árboles en los bordes y de tamaño exagerado no se salen del cuadro', () => {
-  for (const seed of [1, 2, 3, 4, 5, 6]) dentro(pinos({ seed, cantidad: 60, hMin: 300, hMax: 690, suelo: 0.01, latifoliados: 0.3 }));
 });
 
 test('la nieve queda sobre las cumbres, es determinista y se sale solo si no hay cumbres altas', () => {
@@ -96,7 +63,7 @@ test('las cuatro capas de la escena, de lejos a cerca', () => {
   for (const c of capas) if (c.nieve) dentro(c.nieve);
   for (const c of capas) if (c.caras) dentro(c.caras);
   assert.ok(capas[0].caras.length > 0 && capas[1].caras.length > 0, 'las montañas tienen pliegues en sombra');
-  for (const id of [2, 3]) assert.match(capas[id].extra, /class="luz"[\s\S]*class="sombra"/, 'los árboles llevan luz y sombra');
+  for (const id of [2, 3]) assert.match(capas[id].extra, /class="sombra"[\s\S]*class="luz"[\s\S]*<use /, 'los árboles llevan luz y sombra y se reparten con use');
 });
 
 test('los pliegues de las montañas son deterministas, cerrados y dentro del cuadro', () => {
@@ -114,19 +81,80 @@ test('los pliegues de las montañas son deterministas, cerrados y dentro del cua
   }
 });
 
-test('arbolesSvg: cada árbol trae cuerpo, luz y sombra, ordenados del fondo al frente, dentro del cuadro', () => {
-  const svg = arbolesSvg({ seed: 7, cantidad: 25, latifoliados: 0.3 });
-  assert.equal((svg.match(/class="luz"/g) ?? []).length, 25);
-  assert.equal((svg.match(/class="sombra"/g) ?? []).length, 25);
+const subtrazos = (d) => [...d.matchAll(/M[^M]*?Z/g)].map((m) => m[0]);
+const puntos = (d) => {
+  const n = numeros(d);
+  return Array.from({ length: n.length / 2 }, (_, i) => [n[2 * i], n[2 * i + 1]]);
+};
+const area = (pts) => pts.reduce((a, [x1, y1], i) => {
+  const [x2, y2] = pts[(i + 1) % pts.length];
+  return a + (x1 * y2 - x2 * y1) / 2;
+}, 0);
+
+test('árboles: deterministas, sin valores raros y con un <use> por árbol', () => {
+  const o = { seed: 7, cantidad: 25, latifoliados: 0.3, variantes: 5, id: 't' };
+  const svg = arboles(o);
+  assert.equal(svg, arboles(o));
+  assert.notEqual(svg, arboles({ ...o, seed: 8 }));
   assert.doesNotMatch(svg, /NaN|undefined|Infinity/);
-  for (const m of svg.matchAll(/ d="([^"]+)"/g)) dentro(m[1]);
-  assert.equal(svg, arbolesSvg({ seed: 7, cantidad: 25, latifoliados: 0.3 }));
-  assert.ok(arbolesSvg({ seed: 7, cantidad: 0 }).includes('<path'));
+  assert.equal((svg.match(/<use /g) ?? []).length, 25);
+  assert.equal((svg.match(/<g id="t-c\d+"/g) ?? []).length, 5);
+  assert.equal((svg.match(/<g id="t-l\d+"/g) ?? []).length, 4);
+  assert.equal((arboles({ ...o, cantidad: 0 }).match(/<use /g) ?? []).length, 0);
 });
 
-test('las coníferas tienen luz y sombra distintas entre sí (volumen)', () => {
-  const svg = arbolesSvg({ seed: 3, cantidad: 3 });
-  const luz = [...svg.matchAll(/class="luz" d="([^"]+)"/g)].map((m) => m[1]);
-  const sombra = [...svg.matchAll(/class="sombra" d="([^"]+)"/g)].map((m) => m[1]);
-  assert.ok(luz.every((d, i) => d !== sombra[i] && d.length > 100));
+test('árboles: cada <use> apunta a una variante que existe y queda dentro del cuadro', () => {
+  const svg = arboles({ seed: 3, cantidad: 60, latifoliados: 0.25, variantes: 6, id: 'q', hMin: 90, hMax: 400 });
+  const ids = new Set([...svg.matchAll(/<g id="([^"]+)"/g)].map((m) => m[1]));
+  for (const m of svg.matchAll(/<use href="#([^"]+)" transform="translate\(([-\d.]+) ([-\d.]+)\) scale\(([-\d.]+) ([-\d.]+)\)"/g)) {
+    assert.ok(ids.has(m[1]), `falta ${m[1]}`);
+    assert.ok(+m[2] >= 0 && +m[2] <= ANCHO, `x=${m[2]}`);
+    assert.ok(+m[3] > 0 && +m[3] <= ALTO + 40, `y=${m[3]}`);
+    assert.ok(+m[4] > 0 && +m[5] > 0);
+  }
+  assert.equal((svg.match(/<use /g) ?? []).length, 60);
+});
+
+test('árboles: se dibujan del fondo al frente (las bases bajan de arriba hacia abajo)', () => {
+  const svg = arboles({ seed: 5, cantidad: 40, id: 'z' });
+  const ys = [...svg.matchAll(/translate\([-\d.]+ ([-\d.]+)\)/g)].map((m) => +m[1]);
+  assert.equal(ys.length, 40);
+  for (let i = 1; i < ys.length; i++) assert.ok(ys[i] >= ys[i - 1] - 0.05, `orden ${i}`);
+});
+
+test('las coníferas son complejas, con ramas en sentido horario y luces y sombras distintas', () => {
+  const svg = arboles({ seed: 9, cantidad: 3, variantes: 3, id: 'k' });
+  const g = svg.match(/<g id="k-c0">(.*?)<\/g>/)[1];
+  const cuerpo = g.match(/class="c" d="([^"]+)"/)[1];
+  const luz = g.match(/class="luz" d="([^"]+)"/)[1];
+  const sombra = g.match(/class="sombra" d="([^"]+)"/)[1];
+  const partes = subtrazos(cuerpo);
+  assert.ok(partes.length > 20, `ramas=${partes.length}`);
+  assert.ok(puntos(cuerpo).length > 300, 'silueta con muchos puntos: nada de triángulos');
+  for (const t of partes) assert.ok(area(puntos(t)) >= 0, 'sentido horario');
+  assert.notEqual(luz, sombra);
+  assert.ok(subtrazos(luz).length > 10 && subtrazos(sombra).length > 10);
+  const todos = [...puntos(cuerpo), ...puntos(luz), ...puntos(sombra)];
+  assert.ok(todos.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y) && y <= 1 && y >= -310), 'base en 0 y copa hacia arriba');
+});
+
+test('las lengas llevan tronco, copa de matas y algunas son de otoño; sin latifoliados no hay lengas', () => {
+  const con = arboles({ seed: 4, cantidad: 10, latifoliados: 0.5, id: 'm' });
+  assert.match(con, /class="tronco/);
+  assert.match(con, /class="c o"/);
+  assert.match(con, /class="c" d=/);
+  assert.ok(/ Q/.test(con), 'las matas son curvas');
+  assert.doesNotMatch(arboles({ seed: 4, cantidad: 10, id: 'm2' }), /class="tronco/);
+});
+
+test('el terreno es ondulado y se aplana donde va la cabaña', () => {
+  const alto = 700;
+  const suelo = 0.07;
+  const yb = alto * (1 - suelo);
+  const d = arboles({ seed: 2, cantidad: 0, suelo, llano: { x: 1440, r: 260 }, id: 'n' }).match(/class="suelo" d="([^"]+)"/)[1];
+  const pts = puntos(d).filter(([x, y]) => x >= 0 && y < alto);
+  assert.ok(new Set(pts.map(([, y]) => y)).size > 10, 'hay relieve');
+  const centro = pts.filter(([x]) => Math.abs(x - 1440) <= 120);
+  assert.ok(centro.length >= 3 && centro.every(([, y]) => Math.abs(y - yb) < 0.2), 'plano al pie de la cabaña');
+  assert.ok(pts.every(([, y]) => y <= yb + 0.1 && y >= yb - alto * suelo));
 });

@@ -15,7 +15,7 @@ test('mezclarHex en los extremos y en el medio', () => {
 test('la paleta siempre devuelve hex válidos, incluso con valores raros', () => {
   for (const p of [-1, 0, 0.1, 0.35, 0.5, 0.7, 0.99, 1, 2, NaN, undefined]) {
     const pal = paleta(p);
-    assert.deepEqual(Object.keys(pal).sort(), ['borde', 'bosque', 'bosqueLuz', 'bosqueSombra', 'cielo1', 'cielo2', 'cuerpo', 'frente', 'frenteLuz', 'frenteSombra', 'lejos', 'lejosSombra', 'medio', 'medioSombra', 'nieve', 'techo']);
+    assert.deepEqual(Object.keys(pal).sort(), ['borde', 'bosque', 'bosqueLuz', 'bosqueSombra', 'cielo1', 'cielo2', 'cuerpo', 'frente', 'frenteLuz', 'frenteSombra', 'lejos', 'lejosSombra', 'medio', 'medioSombra', 'nieve', 'otono', 'otonoLuz', 'otonoSombra', 'techo']);
     for (const v of Object.values(pal)) assert.match(v, HEX, `p=${p}`);
   }
 });
@@ -75,5 +75,6 @@ test('luces y sombras de los árboles: la luz siempre es más clara que la sombr
     assert.ok(lum(pal.lejosSombra) < lum(pal.lejos), `lejos p=${p}`);
     assert.ok(lum(pal.techo) > lum(pal.frente), `el techo es más claro que los árboles del frente, p=${p}`);
     assert.ok(lum(pal.nieve) > lum(pal.lejos), `la nieve es más clara que la montaña, p=${p}`);
+    assert.ok(lum(pal.otonoLuz) > lum(pal.otono) && lum(pal.otono) > lum(pal.otonoSombra), `lenga de otoño p=${p}`);
   }
 });
