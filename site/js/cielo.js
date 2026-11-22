@@ -12,6 +12,9 @@ const CLAVES = [
   { p: 1, cielo1: '#09111f', cielo2: '#22314f', lejos: '#2a3556', nieve: '#4a5a80', cuerpo: '#2a2024', techo: '#2a2230', borde: '#5d6f9c', otono: '#2b2030', medio: '#1d2946', bosque: '#14243a', frente: '#0a1820' },
 ];
 
+/** Los momentos del día que se dibujan; entre uno y otro, la escena se funde. */
+export const PUNTOS_CLAVE = CLAVES.map((c) => c.p);
+
 const aRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const aHex = (rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
 

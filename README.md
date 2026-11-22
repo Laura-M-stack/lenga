@@ -33,17 +33,18 @@ site/
     tarifas.js        temporada, cotización, disponibilidad, resumen
     cielo.js          paleta, sol, luna, estrellas y fases de texto según el progreso
     paisaje.js        siluetas generadas con semilla
+    escena-raster.js  dibuja cada capa una vez como imagen por momento del día
     parallax-calc.js  progreso, zoom, subida, deriva, pájaros, puntero
     parallax.js       conecta el scroll con la escena
     main.js           render, formulario, menú
-tests/                54 tests con el runner nativo de Node
+tests/                58 tests con el runner nativo de Node
 ```
 
 ## Desarrollo
 
 ```
 npm start    # sirve site/ en http://localhost:4173
-npm test     # 54 tests, sin instalar nada
+npm test     # 58 tests, sin instalar nada
 ```
 
 La lógica (fechas, tarifas, cielo, paisaje y cálculo del parallax) está separada del DOM y se prueba con `node --test`.
@@ -51,3 +52,7 @@ La lógica (fechas, tarifas, cielo, paisaje y cálculo del parallax) está separ
 ## Fotos
 
 Las fotos de las cabañas y del fogón se cargan desde Unsplash. Si no cargan, se muestra un fondo de respaldo. Créditos en el pie de la página.
+
+## Rendimiento
+
+El paisaje se dibuja una sola vez: cada capa se convierte en una imagen por momento del día (alba, día, atardecer y noche). Durante el scroll solo se mueven y se funden esas imágenes con `transform` y `opacity`, que el navegador resuelve en la placa de video sin volver a dibujar ningún árbol.

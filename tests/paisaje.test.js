@@ -175,3 +175,21 @@ test('el terreno es ondulado y se aplana donde va la cabaña', () => {
   assert.ok(centro.length >= 3 && centro.every(([, y]) => Math.abs(y - yb) < 0.2), 'plano al pie de la cabaña');
   assert.ok(pts.every(([, y]) => y <= yb + 0.1 && y >= yb - alto * suelo));
 });
+
+test('cada capa se puede convertir en un SVG completo por momento del día, con sus colores adentro', async () => {
+  const { svgCapa, variablesMomento } = await import('../site/js/escena-raster.js');
+  const capas = capasEscena();
+  for (const c of capas) {
+    const dia = svgCapa(c, 0.35, 800, 300);
+    const noche = svgCapa(c, 1, 800, 300);
+    assert.match(dia, /^<svg xmlns="http:\/\/www.w3.org\/2000\/svg"/);
+    assert.match(dia, /width="800" height="300"/);
+    assert.match(dia, new RegExp(`class="capa--${c.id}"`));
+    assert.notEqual(dia, noche, 'los colores cambian con la hora');
+    assert.doesNotMatch(dia, /NaN|undefined|height: \d+%/);
+  }
+  assert.match(variablesMomento(1), /--luz-op:1\.000/);
+  assert.match(variablesMomento(0.35), /--luz-op:0\.000/);
+  assert.doesNotMatch(capas[3].extra, /humo/, 'el humo va aparte, animado: no se congela dentro de la imagen');
+  assert.ok(Number.isFinite(capas[3].humo.x) && Number.isFinite(capas[3].humo.y));
+});

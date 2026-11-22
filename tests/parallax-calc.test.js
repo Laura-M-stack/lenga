@@ -98,3 +98,42 @@ test('cobertura: el zoom extra tapa justo el corrimiento máximo', () => {
   assert.ok(k > 1 && k < 1.1);
   assert.ok(Math.abs((k - 1) * 720 - 46) < 1e-9);
 });
+
+test('tramo: entre qué momentos clave cae el progreso y cuánto se funde el siguiente', async () => {
+  const { tramo } = await import('../site/js/parallax-calc.js');
+  const P = [0, 0.35, 0.7, 1];
+  assert.deepEqual(tramo(0, P), { i: 0, t: 0 });
+  assert.deepEqual(tramo(0.35, P), { i: 0, t: 1 });
+  assert.equal(tramo(0.5, P).i, 1);
+  assert.ok(Math.abs(tramo(0.525, P).t - 0.5) < 1e-9);
+  assert.deepEqual(tramo(1, P), { i: 2, t: 1 });
+  assert.deepEqual(tramo(-3, P), { i: 0, t: 0 });
+  assert.deepEqual(tramo(7, P), { i: 2, t: 1 });
+  assert.deepEqual(tramo(NaN, P), { i: 0, t: 0 });
+  assert.deepEqual(tramo(0.5, [0]), { i: 0, t: 0 });
+});
+
+test('tamanoRaster: más resolución para el zoom, con tope de memoria', async () => {
+  const { tamanoRaster } = await import('../site/js/parallax-calc.js');
+  assert.deepEqual(tamanoRaster(1000, 400, 1, 1), { w: 1000, h: 400 });
+  assert.deepEqual(tamanoRaster(1000, 400, 1, 1.5), { w: 1500, h: 600 });
+  assert.deepEqual(tamanoRaster(390, 300, 3, 1.45), { w: 1131, h: 870 }); // dpr se limita a 2
+  const grande = tamanoRaster(2560, 700, 2, 1.75);
+  assert.equal(grande.w, 3000);
+  assert.equal(grande.h, Math.round(700 * (3000 / 2560)));
+  assert.deepEqual(tamanoRaster(0, 300, 1), { w: 0, h: 0 });
+  assert.deepEqual(tamanoRaster(800, 300, NaN, 1), { w: 800, h: 300 });
+  assert.deepEqual(tamanoRaster(800, 300, 1, 9), { w: 1440, h: 540 }); // zoom también con tope
+});
+
+test('puntoEnCaja: ubica un punto del dibujo en una caja que lo recorta (slice anclado abajo)', async () => {
+  const { puntoEnCaja } = await import('../site/js/parallax-calc.js');
+  // caja más angosta que el dibujo: se recortan los costados, el centro queda en el centro
+  const a = puntoEnCaja(390, 350, 2400, 700, 1200, 700);
+  assert.ok(Math.abs(a.x - 195) < 1e-9 && Math.abs(a.y - 350) < 1e-9);
+  // caja más ancha: se recorta arriba, el piso queda abajo
+  const b = puntoEnCaja(2400, 400, 2400, 700, 0, 700);
+  assert.deepEqual(b, { x: 0, y: 400 });
+  const c = puntoEnCaja(2400, 400, 2400, 700, 2400, 0);
+  assert.deepEqual(c, { x: 2400, y: -300 });
+});

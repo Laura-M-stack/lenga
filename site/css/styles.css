@@ -116,90 +116,48 @@ a { color: var(--pino); }
     radial-gradient(1.5px 1.5px at 95% 6%, #fff, transparent), radial-gradient(1px 1px at 27% 52%, #fff, transparent),
     radial-gradient(1px 1px at 58% 4%, #fff, transparent), radial-gradient(1.5px 1.5px at 12% 3%, #fff, transparent);
 }
-.astro { position: absolute; width: clamp(54px, 9vw, 110px); aspect-ratio: 1; border-radius: 50%; translate: -50% -50%; will-change: left, top; }
+.astro { position: absolute; left: 0; top: 0; width: clamp(54px, 9vw, 110px); aspect-ratio: 1; border-radius: 50%; translate: -50% -50%; will-change: translate, opacity; }
 .astro--sol { left: 50%; top: 24%; background: radial-gradient(circle, #fffbe6 0 45%, #ffd98a 100%); box-shadow: 0 0 90px 36px rgba(255, 214, 140, 0.55); }
 .astro--luna { left: 30%; top: 40%; opacity: 0; background: #f1f4ff; box-shadow: inset -16px -6px 0 rgba(120, 132, 176, 0.38), 0 0 46px 12px rgba(200, 215, 255, 0.35); }
 .escena-capas { position: absolute; inset: 0; }
 .capa { position: absolute; left: 0; bottom: 0; width: 100%; display: block; transform-origin: 50% 100%; will-change: transform; }
-.capa--lejos { height: 76%; } .capa--lejos path { fill: var(--c-lejos); } .capa--lejos .cara { fill: var(--c-lejos-sombra); } .capa--lejos .nieve { fill: var(--c-nieve); }
-.capa--medio { height: 66%; } .capa--medio path { fill: var(--c-medio); } .capa--medio .cara { fill: var(--c-medio-sombra); }
-/* Los árboles se repiten con <use>: sus estilos no pueden depender de un ancestro (el clon vive en un shadow tree),
-   así que cada capa publica sus colores como variables, que sí se heredan, y los trazos se pintan por su propia clase.
-   Los cuerpos llevan degradado vertical (más claro arriba, más oscuro abajo): --ga* normal, --gb* más oscuro, --go* otoño. */
-.capa--bosque {
-  height: 52%;
-  --t-c: var(--c-bosque); --t-luz: var(--c-bosque-luz); --t-sombra: var(--c-bosque-sombra); --t-brillo: var(--c-bosque-brillo);
-  --t-tronco: #3b3a2e; --t-tronco: color-mix(in srgb, var(--c-bosque) 45%, #5a4330);
-  --t-tronco-luz: color-mix(in srgb, var(--t-tronco) 55%, var(--c-bosque-luz));
-  --ga1: color-mix(in srgb, var(--c-bosque-luz) 65%, var(--c-bosque)); --ga2: var(--c-bosque); --ga3: color-mix(in srgb, var(--c-bosque-sombra) 45%, var(--c-bosque));
-  --gb1: var(--c-bosque); --gb2: color-mix(in srgb, var(--c-bosque-sombra) 35%, var(--c-bosque)); --gb3: var(--c-bosque-sombra);
-  --go1: var(--c-otono-brillo); --go2: var(--c-otono); --go3: var(--c-otono-sombra);
-  --fa: url(#bosque-ga); --fb: url(#bosque-gb); --fo: url(#bosque-go);
-}
-.capa--bosque path { fill: var(--c-bosque); }
-.capa--frente {
-  height: 46%;
-  --t-c: var(--c-frente); --t-luz: var(--c-frente-luz); --t-sombra: var(--c-frente-sombra); --t-brillo: var(--c-frente-brillo);
-  --t-tronco: #3a3a2c; --t-tronco: color-mix(in srgb, var(--c-frente) 40%, #6a4a32);
-  --t-tronco-luz: color-mix(in srgb, var(--t-tronco) 50%, var(--c-frente-luz));
-  --ga1: color-mix(in srgb, var(--c-frente-luz) 70%, var(--c-frente)); --ga2: var(--c-frente); --ga3: color-mix(in srgb, var(--c-frente-sombra) 50%, var(--c-frente));
-  --gb1: var(--c-frente); --gb2: color-mix(in srgb, var(--c-frente-sombra) 40%, var(--c-frente)); --gb3: var(--c-frente-sombra);
-  --go1: var(--c-otono-brillo); --go2: var(--c-otono); --go3: var(--c-otono-sombra);
-  --fa: url(#frente-ga); --fb: url(#frente-gb); --fo: url(#frente-go);
-}
-.capa--frente .suelo { fill: var(--c-frente); }
-.c { fill: var(--fa); }
-.c.b { fill: var(--fb); }
-.c.o { fill: var(--fo); }
-.luz { fill: var(--t-brillo); }
-.sombra { fill: var(--t-sombra); }
-.tronco { fill: var(--t-tronco); }
-.tl { fill: var(--t-tronco-luz); }
-.luz.o { fill: var(--c-otono-luz); }
-.sombra.o { fill: var(--c-otono-sombra); }
-.tronco.o { fill: var(--t-tronco); }
-.tl.o { fill: var(--t-tronco-luz); }
-/* Cabaña: los colores vienen de la paleta del momento del día (JS); estos son los del mediodía por si el JS no corre */
-.capa--frente .cabana__cuerpo { fill: var(--c-cuerpo); }
-.capa--frente .cabana__chimenea { fill: color-mix(in srgb, var(--c-cuerpo) 55%, #6b6f6a); }
-.capa--frente .cabana__remate { fill: var(--c-techo); }
-.capa--frente .cabana__techo { fill: var(--c-techo); }
-.capa--frente .cabana__teja { fill: #000; opacity: 0.32; }
-.capa--frente .cabana__borde { fill: none; stroke: var(--c-borde); stroke-width: 3.2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.9; }
-.capa--frente .cabana__puerta { fill: color-mix(in srgb, var(--c-cuerpo) 35%, #000); }
-.capa--frente .cabana__veta { fill: #000; opacity: 0.3; }
-.capa--frente .cabana__punta { fill: color-mix(in srgb, var(--c-cuerpo) 84%, #000); }
-.capa--frente .cabana__base { fill: color-mix(in srgb, var(--c-cuerpo) 30%, #55595a); }
-.capa--frente .cabana__deck { fill: color-mix(in srgb, var(--c-cuerpo) 80%, #000); }
-.capa--frente .cabana__lenia { fill: color-mix(in srgb, var(--c-cuerpo) 72%, #b98a58); stroke: color-mix(in srgb, var(--c-cuerpo) 45%, #000); stroke-width: 1.2; }
-.capa--frente .cabana__marco, .capa--frente .cabana__ventana-base { fill: #141c26; }
-.capa--frente .cabana__ventana { fill: var(--luz); opacity: var(--luz-op); filter: drop-shadow(0 0 14px rgba(255, 184, 107, 0.9)); }
-.capa--frente .cabana__farol { fill: var(--luz); opacity: var(--luz-op); filter: drop-shadow(0 0 8px rgba(255, 184, 107, 0.95)); }
-.capa--frente .cabana__pozo { fill: var(--luz); opacity: calc(var(--luz-op) * 0.22); }
-/* Humo de la chimenea: solo con movimiento */
-.humo { display: none; }
+.capa--lejos { height: 76%; }
+.capa--medio { height: 66%; }
+.capa--bosque { height: 52%; }
+.capa--frente { height: 46%; }
+.capa__img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.capa__img[hidden] { display: none; }
+/* Cielo: un degradado por momento del día, fundidos entre sí con opacidad */
+.cielo__k { position: absolute; inset: 0; }
+/* Humo de la chimenea: bocanadas suaves que suben, solo con movimiento */
+.humo { display: none; position: absolute; width: 0; height: 0; }
 .parallax-on .humo { display: block; }
-.capa--frente .humo__bola { fill: color-mix(in srgb, var(--cielo2) 60%, #fff); opacity: 0; transform-box: fill-box; transform-origin: 50% 100%; animation: humo 7s linear infinite; filter: blur(1.6px); }
-.capa--frente .humo__bola--2 { animation-delay: -2.3s; }
-.capa--frente .humo__bola--3 { animation-delay: -4.6s; }
+.humo i {
+  position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 240, 246, 0.75), rgba(236, 240, 246, 0) 70%);
+  opacity: 0; animation: humo 7s linear infinite; will-change: transform, opacity;
+}
+.humo i:nth-child(2) { animation-delay: -2.3s; }
+.humo i:nth-child(3) { animation-delay: -4.6s; }
 @keyframes humo {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
-  12% { opacity: 0.55; }
-  100% { opacity: 0; transform: translate(26px, -92px) scale(3.1); }
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  12% { opacity: 0.6; }
+  100% { opacity: 0; transform: translate(30px, -100px) scale(3); }
 }
 /* Pájaros: cruzan el cielo con el scroll y aletean solos */
 .aves { display: none; position: absolute; inset: 0; pointer-events: none; }
 .parallax-on .aves { display: block; }
-.ave { position: absolute; width: 22px; height: 9px; fill: #2c3a4a; fill: color-mix(in srgb, var(--c-lejos) 40%, #0b1118); opacity: 0; transform-origin: 50% 70%; animation: aleteo 0.55s ease-in-out infinite alternate; animation-delay: var(--ret); scale: var(--esc); }
+.ave { position: absolute; left: 0; top: 0; will-change: translate, opacity; width: 22px; height: 9px; fill: #2c3a4a; fill: color-mix(in srgb, var(--c-lejos) 40%, #0b1118); opacity: 0; transform-origin: 50% 70%; animation: aleteo 0.55s ease-in-out infinite alternate; animation-delay: var(--ret); scale: var(--esc); }
 @keyframes aleteo { from { transform: scaleY(1); } to { transform: scaleY(0.35); } }
 /* Viñeta suave: oscurece los bordes para llevar la mirada al centro */
 .escena-capas::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 85% 75% at 50% 58%, transparent 55%, rgba(5, 10, 14, 0.34) 100%); }
 .niebla {
   position: absolute; left: 0; right: 0; pointer-events: none;
   background-image:
-    radial-gradient(40% 50% at 28% 50%, color-mix(in srgb, var(--cielo2) 72%, transparent), transparent 66%),
-    radial-gradient(40% 50% at 68% 50%, color-mix(in srgb, var(--cielo2) 58%, transparent), transparent 66%);
+    radial-gradient(40% 50% at 28% 50%, rgba(226, 234, 240, 0.72), transparent 66%),
+    radial-gradient(40% 50% at 68% 50%, rgba(226, 234, 240, 0.58), transparent 66%);
   background-size: 1200px 100%; background-repeat: repeat-x;
+  right: auto; width: calc(100% + 1200px); will-change: transform, opacity; /* se desliza con transform: no se repinta */
 }
 .niebla--a { bottom: 36%; height: 15%; }
 .niebla--b { bottom: 22%; height: 14%; }

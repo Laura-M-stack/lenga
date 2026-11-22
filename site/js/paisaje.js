@@ -377,6 +377,11 @@ export function arboles(opts) {
   return `<path class="suelo" d="${terreno}"/><defs>${defs}</defs>${lista.map((t) => t.uso).join('')}`;
 }
 
+/** Dónde sale el humo de la chimenea de `cabana(x, yBase)`, en coordenadas del cuadro. */
+export function chimenea(x, yBase) {
+  return { x: x - 115 + 230 * 0.68 + 13, y: yBase - 120 - 76 };
+}
+
 /** Cabaña de troncos para el primer plano (markup SVG; los colores salen de variables CSS). */
 export function cabana(x, yBase) {
   const w = 230;
@@ -401,7 +406,6 @@ export function cabana(x, yBase) {
     `<ellipse class="cabana__pozo" cx="${f(l + 66)}" cy="${f(yBase + 1)}" rx="86" ry="9"/>`,
     `<rect class="cabana__chimenea" x="${l + w * 0.68}" y="${t - 64}" width="26" height="70"/>`,
     `<rect class="cabana__remate" x="${l + w * 0.68 - 4}" y="${t - 70}" width="34" height="8"/>`,
-    `<g class="humo"><ellipse class="humo__bola" cx="${f(hx)}" cy="${t - 76}" rx="9" ry="7"/><ellipse class="humo__bola humo__bola--2" cx="${f(hx)}" cy="${t - 76}" rx="9" ry="7"/><ellipse class="humo__bola humo__bola--3" cx="${f(hx)}" cy="${t - 76}" rx="9" ry="7"/></g>`,
     `<rect class="cabana__base" x="${l - 6}" y="${yBase - 12}" width="${w + 12}" height="14"/>`,
     `<rect class="cabana__cuerpo" x="${l}" y="${t}" width="${w}" height="${cuerpoH}"/>`,
     vetas,
@@ -447,6 +451,7 @@ export function capasEscena() {
       caras: '',
       nieve: '',
       extra: arboles({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, detalle: 1, variantes: 7, llano: { x: 1450, r: 260 }, id: 'frente' }) + cabana(1450, ALTO * 0.93),
+      humo: chimenea(1450, ALTO * 0.93),
     },
   ];
 }

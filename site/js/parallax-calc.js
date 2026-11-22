@@ -67,3 +67,37 @@ export function corrimientoPuntero(nx, amp) {
 export function coberturaX(amp, ancho) {
   return ancho > 0 && amp > 0 ? 1 + amp / (ancho / 2) : 1;
 }
+
+/**
+ * Entre qué dos momentos clave cae el progreso p y cuánto del segundo se ve (0 a 1).
+ * Con eso cada capa muestra dos imágenes y funde una sobre la otra.
+ */
+export function tramo(p, puntos) {
+  if (!Array.isArray(puntos) || puntos.length < 2) return { i: 0, t: 0 };
+  const q = Math.max(puntos[0], Math.min(puntos[puntos.length - 1], Number.isFinite(p) ? p : 0));
+  let i = 0;
+  while (i < puntos.length - 2 && q > puntos[i + 1]) i++;
+  const t = (q - puntos[i]) / (puntos[i + 1] - puntos[i] || 1);
+  return { i, t: clamp01(t) };
+}
+
+/**
+ * Tamaño en píxeles de la imagen de una capa. Se dibuja con más resolución que la caja para que siga nítida
+ * cuando la capa crece con el zoom, pero con un tope para no gastar memoria de más (sobre todo en celulares).
+ */
+export function tamanoRaster(cajaAncho, cajaAlto, dpr, zoomMax = 1, tope = 3000) {
+  if (!(cajaAncho > 0) || !(cajaAlto > 0)) return { w: 0, h: 0 };
+  const densidad = Math.min(Number.isFinite(dpr) && dpr > 0 ? dpr : 1, 2);
+  let escala = densidad * Math.max(1, Math.min(zoomMax, 1.8));
+  if (cajaAncho * escala > tope) escala = tope / cajaAncho;
+  return { w: Math.max(1, Math.round(cajaAncho * escala)), h: Math.max(1, Math.round(cajaAlto * escala)) };
+}
+
+/**
+ * Dónde cae (en px de la caja) un punto del dibujo de ancho x alto, cuando el dibujo cubre la caja
+ * anclado abajo y al centro (preserveAspectRatio="xMidYMax slice").
+ */
+export function puntoEnCaja(cajaAncho, cajaAlto, ancho, alto, x, y) {
+  const s = Math.max(cajaAncho / ancho, cajaAlto / alto);
+  return { x: (cajaAncho - ancho * s) / 2 + x * s, y: cajaAlto - (alto - y) * s };
+}
