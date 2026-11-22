@@ -125,7 +125,7 @@ test('árboles: se dibujan del fondo al frente (las bases bajan de arriba hacia 
 test('las coníferas son complejas, con ramas en sentido horario y luces y sombras distintas', () => {
   const svg = arboles({ seed: 9, cantidad: 3, variantes: 3, id: 'k' });
   const g = svg.match(/<g id="k-c0">(.*?)<\/g>/)[1];
-  const cuerpo = g.match(/class="c" d="([^"]+)"/)[1];
+  const cuerpo = g.match(/class="c(?: b)?" d="([^"]+)"/)[1];
   const luz = g.match(/class="luz" d="([^"]+)"/)[1];
   const sombra = g.match(/class="sombra" d="([^"]+)"/)[1];
   const partes = subtrazos(cuerpo);
@@ -140,11 +140,32 @@ test('las coníferas son complejas, con ramas en sentido horario y luces y sombr
 
 test('las lengas llevan tronco, copa de matas y algunas son de otoño; sin latifoliados no hay lengas', () => {
   const con = arboles({ seed: 4, cantidad: 10, latifoliados: 0.5, id: 'm' });
-  assert.match(con, /class="tronco/);
+  assert.match(con, /<g id="m-l0">/);
+  assert.match(con, /class="tronco o"/);
   assert.match(con, /class="c o"/);
+  assert.match(con, /class="bri o"/);
   assert.match(con, /class="c" d=/);
   assert.ok(/ Q/.test(con), 'las matas son curvas');
-  assert.doesNotMatch(arboles({ seed: 4, cantidad: 10, id: 'm2' }), /class="tronco/);
+  assert.doesNotMatch(arboles({ seed: 4, cantidad: 10, id: 'm2' }), /<g id="m2-l\d/);
+});
+
+test('los árboles llevan degradados, tronco con franja de luz y hierba en el borde del terreno', () => {
+  const svg = arboles({ seed: 6, cantidad: 8, latifoliados: 0.4, id: 'd' });
+  for (const k of ['a', 'b', 'o']) assert.match(svg, new RegExp(`<linearGradient id="d-g${k}"`));
+  assert.match(svg, /var\(--ga1\)/);
+  assert.match(svg, /class="tl" d=/);
+  assert.match(svg, /class="hierba" d="M/);
+  assert.equal((svg.match(/<stop /g) ?? []).length, 9);
+});
+
+test('las hebras de agujas aparecen solo si se piden y son trazos curvos', () => {
+  const sin = arboles({ seed: 6, cantidad: 4, hebras: 0, id: 'h0' });
+  const con = arboles({ seed: 6, cantidad: 4, hebras: 5, id: 'h1' });
+  assert.doesNotMatch(sin, /class="h"|class="hs"/);
+  assert.match(con, /class="h" d="M[^"]* Q/);
+  assert.match(con, /class="hs" d="M[^"]* Q/);
+  assert.doesNotMatch(con, /NaN|undefined|Infinity/);
+  assert.ok(con.length > sin.length);
 });
 
 test('el terreno es ondulado y se aplana donde va la cabaña', () => {

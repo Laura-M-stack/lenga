@@ -6,7 +6,7 @@ Demo de sitio para unas cabañas de montaña ficticias en la Patagonia andina. E
 
 ## Qué muestra
 
-- **Parallax de escena completa.** Cuatro capas de paisaje (cordillera lejana, cordillera media, bosque y primer plano con una cabaña) que crecen a distinta velocidad mientras se baja, como si el visitante avanzara hacia el bosque. Dos bandas de niebla se deslizan de costado con el scroll. Los árboles son coníferas de ramas caídas con dientes y lengas de copa en matas (algunas ya de otoño), todos distintos, con luz arriba de cada rama y sombra abajo; el terreno es ondulado, las montañas tienen pliegues y nieve, pasan pájaros, sale humo de la chimenea y, con mouse, las capas se corren a distinta velocidad según dónde apuntes.
+- **Parallax de escena completa.** Cuatro capas de paisaje (cordillera lejana, cordillera media, bosque y primer plano con una cabaña) que crecen a distinta velocidad mientras se baja, como si el visitante avanzara hacia el bosque. Dos bandas de niebla se deslizan de costado con el scroll. Los árboles son coníferas de ramas caídas con dientes y lengas de copa en matas (algunas ya de otoño), todos distintos, con tronco a la vista, degradado de color, luz arriba de cada rama, sombra abajo y trazos finos de agujas; el terreno es ondulado, las montañas tienen pliegues y nieve, pasan pájaros, sale humo de la chimenea y, con mouse, las capas se corren a distinta velocidad según dónde apuntes.
 - **Cielo que pasa del alba a la noche.** El mismo recorrido de scroll cambia la paleta del cielo y de las capas, mueve el sol y la luna, hace aparecer las estrellas y prende la ventana de la cabaña. Tres textos entran y salen en distintos tramos.
 - **Columnas a distinta velocidad** en la sección de actividades, **foto con desplazamiento interno** en cada cabaña y en la banda del fogón, y **pie tipo telón** que queda fijo mientras el contenido se levanta.
 - **Cotizador de estadías.** Cada noche se cobra con la tarifa de su temporada (baja, media o alta), así que una estadía que cruza de temporada se desglosa. Aplica estadía mínima según la temporada de llegada, descuento por 7 y 14 noches, extras, seña del 30%, capacidad de cada cabaña y un máximo de 21 noches.
@@ -36,14 +36,14 @@ site/
     parallax-calc.js  progreso, zoom, subida, deriva, pájaros, puntero
     parallax.js       conecta el scroll con la escena
     main.js           render, formulario, menú
-tests/                52 tests con el runner nativo de Node
+tests/                54 tests con el runner nativo de Node
 ```
 
 ## Desarrollo
 
 ```
 npm start    # sirve site/ en http://localhost:4173
-npm test     # 52 tests, sin instalar nada
+npm test     # 54 tests, sin instalar nada
 ```
 
 La lógica (fechas, tarifas, cielo, paisaje y cálculo del parallax) está separada del DOM y se prueba con `node --test`.

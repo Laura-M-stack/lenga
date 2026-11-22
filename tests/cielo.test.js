@@ -15,7 +15,7 @@ test('mezclarHex en los extremos y en el medio', () => {
 test('la paleta siempre devuelve hex válidos, incluso con valores raros', () => {
   for (const p of [-1, 0, 0.1, 0.35, 0.5, 0.7, 0.99, 1, 2, NaN, undefined]) {
     const pal = paleta(p);
-    assert.deepEqual(Object.keys(pal).sort(), ['borde', 'bosque', 'bosqueLuz', 'bosqueSombra', 'cielo1', 'cielo2', 'cuerpo', 'frente', 'frenteLuz', 'frenteSombra', 'lejos', 'lejosSombra', 'medio', 'medioSombra', 'nieve', 'otono', 'otonoLuz', 'otonoSombra', 'techo']);
+    assert.deepEqual(Object.keys(pal).sort(), ['borde', 'bosque', 'bosqueBrillo', 'bosqueLuz', 'bosqueSombra', 'cielo1', 'cielo2', 'cuerpo', 'frente', 'frenteBrillo', 'frenteLuz', 'frenteSombra', 'lejos', 'lejosSombra', 'medio', 'medioSombra', 'nieve', 'otono', 'otonoBrillo', 'otonoLuz', 'otonoSombra', 'techo']);
     for (const v of Object.values(pal)) assert.match(v, HEX, `p=${p}`);
   }
 });

@@ -79,7 +79,7 @@ export function iniciarParallax() {
     s.setProperty('--c-bosque', pal.bosque);
     s.setProperty('--c-frente', pal.frente);
     s.setProperty('--c-nieve', pal.nieve);
-    for (const [k, v] of Object.entries({ bosqueLuz: pal.bosqueLuz, bosqueSombra: pal.bosqueSombra, frenteLuz: pal.frenteLuz, frenteSombra: pal.frenteSombra, lejosSombra: pal.lejosSombra, medioSombra: pal.medioSombra, cuerpo: pal.cuerpo, techo: pal.techo, borde: pal.borde, otono: pal.otono, otonoLuz: pal.otonoLuz, otonoSombra: pal.otonoSombra })) {
+    for (const [k, v] of Object.entries({ bosqueLuz: pal.bosqueLuz, bosqueSombra: pal.bosqueSombra, frenteLuz: pal.frenteLuz, frenteSombra: pal.frenteSombra, lejosSombra: pal.lejosSombra, medioSombra: pal.medioSombra, cuerpo: pal.cuerpo, techo: pal.techo, borde: pal.borde, otono: pal.otono, otonoLuz: pal.otonoLuz, otonoSombra: pal.otonoSombra, bosqueBrillo: pal.bosqueBrillo, frenteBrillo: pal.frenteBrillo, otonoBrillo: pal.otonoBrillo })) {
       s.setProperty(`--c-${k.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase())}`, v);
     }
     s.setProperty('--luz-op', opacidadLuz(p).toFixed(3));

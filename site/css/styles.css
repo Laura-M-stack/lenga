@@ -96,7 +96,7 @@ a { color: var(--pino); }
   --cielo1: #4f9bd8; --cielo2: #d3ebf7;
   --c-nieve: #f4f8fb; --c-lejos: #9ab8d0; --c-medio: #6f9ba0; --c-bosque: #2f6b4c; --c-frente: #1d4a35;
   --c-lejos-sombra: #8197b0; --c-medio-sombra: #587e83; --c-bosque-luz: #4f8a68; --c-bosque-sombra: #1c4230; --c-frente-luz: #2f6048; --c-frente-sombra: #112f22;
-  --c-otono: #c0562a; --c-otono-luz: #dd8a3e; --c-otono-sombra: #7d2f1c;
+  --c-otono: #c0562a; --c-otono-luz: #dd8a3e; --c-otono-sombra: #7d2f1c; --c-otono-brillo: #f2b256; --c-bosque-brillo: #6ea878; --c-frente-brillo: #4f8a62;
   --c-cuerpo: #7b5232; --c-techo: #4a2c22; --c-borde: #c58a5c;
   --luz-op: 0;
   position: relative; overflow: hidden;
@@ -124,19 +124,47 @@ a { color: var(--pino); }
 .capa--lejos { height: 76%; } .capa--lejos path { fill: var(--c-lejos); } .capa--lejos .cara { fill: var(--c-lejos-sombra); } .capa--lejos .nieve { fill: var(--c-nieve); }
 .capa--medio { height: 66%; } .capa--medio path { fill: var(--c-medio); } .capa--medio .cara { fill: var(--c-medio-sombra); }
 /* Los árboles se repiten con <use>: sus estilos no pueden depender de un ancestro (el clon vive en un shadow tree),
-   así que cada capa publica sus colores como variables, que sí se heredan, y los trazos se pintan por su propia clase. */
-.capa--bosque { height: 52%; --t-c: var(--c-bosque); --t-luz: var(--c-bosque-luz); --t-sombra: var(--c-bosque-sombra); --t-tronco: #2f3a30; --t-tronco: color-mix(in srgb, var(--c-bosque) 55%, #3d3026); }
+   así que cada capa publica sus colores como variables, que sí se heredan, y los trazos se pintan por su propia clase.
+   Los cuerpos llevan degradado vertical (más claro arriba, más oscuro abajo): --ga* normal, --gb* más oscuro, --go* otoño. */
+.capa--bosque {
+  height: 52%;
+  --t-c: var(--c-bosque); --t-luz: var(--c-bosque-luz); --t-sombra: var(--c-bosque-sombra); --t-brillo: var(--c-bosque-brillo);
+  --t-tronco: #3b3a2e; --t-tronco: color-mix(in srgb, var(--c-bosque) 45%, #5a4330);
+  --t-tronco-luz: color-mix(in srgb, var(--t-tronco) 55%, var(--c-bosque-luz));
+  --ga1: color-mix(in srgb, var(--c-bosque-luz) 65%, var(--c-bosque)); --ga2: var(--c-bosque); --ga3: color-mix(in srgb, var(--c-bosque-sombra) 45%, var(--c-bosque));
+  --gb1: var(--c-bosque); --gb2: color-mix(in srgb, var(--c-bosque-sombra) 35%, var(--c-bosque)); --gb3: var(--c-bosque-sombra);
+  --go1: var(--c-otono-brillo); --go2: var(--c-otono); --go3: var(--c-otono-sombra);
+  --fa: url(#bosque-ga); --fb: url(#bosque-gb); --fo: url(#bosque-go);
+}
 .capa--bosque path { fill: var(--c-bosque); }
-.capa--frente { height: 46%; --t-c: var(--c-frente); --t-luz: var(--c-frente-luz); --t-sombra: var(--c-frente-sombra); --t-tronco: #2c3a2c; --t-tronco: color-mix(in srgb, var(--c-frente) 50%, #4a3626); }
+.capa--frente {
+  height: 46%;
+  --t-c: var(--c-frente); --t-luz: var(--c-frente-luz); --t-sombra: var(--c-frente-sombra); --t-brillo: var(--c-frente-brillo);
+  --t-tronco: #3a3a2c; --t-tronco: color-mix(in srgb, var(--c-frente) 40%, #6a4a32);
+  --t-tronco-luz: color-mix(in srgb, var(--t-tronco) 50%, var(--c-frente-luz));
+  --ga1: color-mix(in srgb, var(--c-frente-luz) 70%, var(--c-frente)); --ga2: var(--c-frente); --ga3: color-mix(in srgb, var(--c-frente-sombra) 50%, var(--c-frente));
+  --gb1: var(--c-frente); --gb2: color-mix(in srgb, var(--c-frente-sombra) 40%, var(--c-frente)); --gb3: var(--c-frente-sombra);
+  --go1: var(--c-otono-brillo); --go2: var(--c-otono); --go3: var(--c-otono-sombra);
+  --fa: url(#frente-ga); --fb: url(#frente-gb); --fo: url(#frente-go);
+}
 .capa--frente .suelo { fill: var(--c-frente); }
-.c { fill: var(--t-c); }
-.luz { fill: var(--t-luz); }
-.sombra { fill: var(--t-sombra); }
+.hierba { fill: var(--t-luz); }
+.c { fill: var(--fa); }
+.c.b { fill: var(--fb); }
+.c.o { fill: var(--fo); }
+.luz { fill: var(--t-luz); opacity: 0.9; }
+.sombra { fill: var(--t-sombra); opacity: 0.85; }
 .tronco { fill: var(--t-tronco); }
-.c.o { fill: var(--c-otono); }
+.tl { fill: var(--t-tronco-luz); }
+.h, .hs { fill: none; stroke-linecap: round; }
+.h { stroke: var(--t-brillo); stroke-width: 1.05; opacity: 0.7; }
+.hs { stroke: var(--t-sombra); stroke-width: 1.05; opacity: 0.6; }
+.bri { fill: var(--t-brillo); opacity: 0.75; }
 .luz.o { fill: var(--c-otono-luz); }
 .sombra.o { fill: var(--c-otono-sombra); }
+.bri.o { fill: var(--c-otono-brillo); opacity: 0.85; }
 .tronco.o { fill: var(--t-tronco); }
+.tl.o { fill: var(--t-tronco-luz); }
 /* Cabaña: los colores vienen de la paleta del momento del día (JS); estos son los del mediodía por si el JS no corre */
 .capa--frente .cabana__cuerpo { fill: var(--c-cuerpo); }
 .capa--frente .cabana__chimenea { fill: color-mix(in srgb, var(--c-cuerpo) 55%, #6b6f6a); }
