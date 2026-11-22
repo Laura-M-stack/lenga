@@ -1,0 +1,12 @@
+{
+  "name": "lenga",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo de cabañas de montaña con parallax de escena completa (cielo que va del alba a la noche), cotizador de estadías y disponibilidad. HTML, CSS y JavaScript sin dependencias.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}

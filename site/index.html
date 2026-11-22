@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lenga · Cabañas de montaña en la Patagonia (demo)</title>
+  <meta name="description" content="Demo de sitio para unas cabañas de montaña: una escena con parallax que va del alba a la noche, cotizador de estadías y disponibilidad en vivo." />
+  <meta name="theme-color" content="#0f1f1a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1f1a'/%3E%3Cpath d='M32 10l13 18H38l10 14H36l9 14H19l9-14H16l10-14h-7z' fill='%239fd4b3'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;700&family=Young+Serif&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="saltar" href="#cabanas">Saltar al contenido</a>
+  <div class="demo-banner" role="note">Sitio de demostración: el negocio, los precios y la disponibilidad son de ejemplo.</div>
+
+  <header class="header" id="top">
+    <a class="marca" href="#inicio" aria-label="Lenga, ir al inicio">
+      <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 3l7 10h-4l5 8h-6l4 7H10l4-7H8l5-8H9z" fill="currentColor"/></svg>
+      <span>Lenga</span>
+    </a>
+    <button class="menu-boton" type="button" aria-expanded="false" aria-controls="menu" data-menu-boton>
+      <span class="menu-boton__texto">Menú</span>
+    </button>
+    <nav class="menu" id="menu" aria-label="Principal" data-menu>
+      <a href="#cabanas">Cabañas</a>
+      <a href="#actividades">Qué hacer</a>
+      <a href="#reservar">Consultar fechas</a>
+      <a href="#llegar">Cómo llegar</a>
+    </nav>
+  </header>
+
+  <main id="contenido">
+    <section class="hero" id="inicio" aria-label="Presentación" data-hero>
+      <div class="hero__pista" data-pista>
+        <div class="hero__escena" data-escena>
+          <div class="cielo" aria-hidden="true"></div>
+          <div class="estrellas" aria-hidden="true" data-estrellas></div>
+          <div class="astro astro--sol" aria-hidden="true" data-sol></div>
+          <div class="astro astro--luna" aria-hidden="true" data-luna></div>
+          <div class="escena-capas" aria-hidden="true" data-capas></div>
+
+          <div class="hero__textos">
+            <div class="hero__texto" data-fase="0,0.3">
+              <p class="eyebrow">Cabañas de montaña · Patagonia andina</p>
+              <h1>Entre lengas, el silencio se escucha.</h1>
+              <p class="hero__bajada">Tres cabañas de madera a doce kilómetros del pueblo, con hogar a leña, vista a la cordillera y ni una luz cerca.</p>
+              <a class="boton" href="#reservar">Consultar fechas</a>
+            </div>
+            <div class="hero__texto hero__texto--centro" data-fase="0.38,0.64">
+              <p class="eyebrow">Cuando cae el sol</p>
+              <h2 class="hero__h2">Se prende el fogón y el día se queda quieto.</h2>
+              <p class="hero__bajada">Mate en el deck mientras la cordillera cambia de color, y después la cena a la luz de las brasas.</p>
+            </div>
+            <div class="hero__texto hero__texto--derecha" data-fase="0.74,1">
+              <p class="eyebrow">Ya es de noche</p>
+              <h2 class="hero__h2">Dormí con el cielo entero encima.</h2>
+              <p class="hero__bajada">Sin contaminación lumínica, la Vía Láctea se ve a simple vista. Te prestamos mantas y telescopio.</p>
+              <a class="boton" href="#reservar">Ver disponibilidad</a>
+            </div>
+          </div>
+          <p class="hero__bajar" aria-hidden="true">Bajá para ver cómo pasa el día</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion" id="cabanas" aria-labelledby="cabanas-titulo">
+      <div class="contenedor">
+        <p class="eyebrow eyebrow--pino">Dónde dormir</p>
+        <h2 class="titulo" id="cabanas-titulo">Tres cabañas, tres maneras de quedarse</h2>
+        <p class="bajada">Todas con calefacción, ropa blanca, cocina equipada y leña para la primera noche.</p>
+        <div class="cabanas" data-cabanas></div>
+      </div>
+    </section>
+
+    <section class="banda" aria-label="Fogón encendido">
+      <div class="banda__foto" data-foto-fondo="fogon" data-parallax="0.14" data-parallax-max="0.16" role="img" aria-label="Fogón encendido dentro de una cabaña"></div>
+      <div class="banda__velo"></div>
+      <p class="banda__frase">El fogón está prendido desde las seis de la tarde.</p>
+    </section>
+
+    <section class="seccion seccion--actividades" id="actividades" aria-labelledby="actividades-titulo">
+      <div class="contenedor">
+        <p class="eyebrow eyebrow--pino">Qué hacer</p>
+        <h2 class="titulo" id="actividades-titulo">Cuatro planes, ninguno apurado</h2>
+        <div class="actividades" data-actividades></div>
+      </div>
+    </section>
+
+    <section class="seccion seccion--noche" id="reservar" aria-labelledby="reservar-titulo">
+      <div class="contenedor">
+        <p class="eyebrow eyebrow--claro">Consultar fechas</p>
+        <h2 class="titulo titulo--claro" id="reservar-titulo">Mirá si hay lugar y cuánto sale</h2>
+        <p class="bajada bajada--claro">Elegí la cabaña y las fechas: el precio se calcula noche por noche, con la tarifa de cada temporada.</p>
+
+        <div class="reservar">
+          <form class="form" id="form-consulta" novalidate autocomplete="off">
+            <div class="campo">
+              <label for="cabana">Cabaña</label>
+              <select id="cabana" name="cabana"></select>
+            </div>
+            <div class="fila">
+              <div class="campo">
+                <label for="llegada">Llegada</label>
+                <input id="llegada" name="llegada" type="date" required />
+              </div>
+              <div class="campo">
+                <label for="salida">Salida</label>
+                <input id="salida" name="salida" type="date" required />
+              </div>
+            </div>
+            <div class="fila">
+              <div class="campo">
+                <label for="huespedes">Personas</label>
+                <input id="huespedes" name="huespedes" type="number" min="1" max="6" value="2" inputmode="numeric" required />
+              </div>
+              <div class="campo">
+                <label for="nombre">Tu nombre (opcional)</label>
+                <input id="nombre" name="nombre" type="text" maxlength="60" autocomplete="off" />
+              </div>
+            </div>
+            <fieldset class="extras">
+              <legend>Extras</legend>
+              <label class="check"><input type="checkbox" name="desayuno" /> <span>Desayuno de campo <small>$6.500 por persona por noche</small></span></label>
+              <label class="check"><input type="checkbox" name="lena" /> <span>Leña extra <small>$12.000</small></span></label>
+              <label class="check"><input type="checkbox" name="mascota" /> <span>Mascota chica <small>$10.000, una por estadía</small></span></label>
+            </fieldset>
+          </form>
+
+          <div class="resultado" aria-live="polite" data-resultado></div>
+        </div>
+
+        <div class="ocupacion" aria-labelledby="ocupacion-titulo">
+          <h3 id="ocupacion-titulo">Ocupación de los próximos 60 días</h3>
+          <div data-ocupacion></div>
+          <p class="ocupacion__ref"><span class="ref ref--libre"></span> Libre <span class="ref ref--ocupada"></span> Ocupada</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="seccion" id="llegar" aria-labelledby="llegar-titulo">
+      <div class="contenedor llegar">
+        <div>
+          <p class="eyebrow eyebrow--pino">Cómo llegar</p>
+          <h2 class="titulo" id="llegar-titulo">A doce kilómetros del pueblo, por ruta de ripio</h2>
+          <p class="bajada">Te enviamos las indicaciones y el punto de GPS cuando confirmás la reserva. El último tramo se hace bien con auto común.</p>
+        </div>
+        <dl class="datos">
+          <div><dt>Dirección</dt><dd data-dato="direccion"></dd></div>
+          <div><dt>Check-in</dt><dd data-dato="checkIn"></dd></div>
+          <div><dt>Check-out</dt><dd data-dato="checkOut"></dd></div>
+          <div><dt>Teléfono</dt><dd data-dato="telefono"></dd></div>
+          <div><dt>Instagram</dt><dd data-dato="instagram"></dd></div>
+        </dl>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie" data-pie>
+    <div class="contenedor pie__contenido">
+      <p class="pie__marca">Lenga</p>
+      <p>Demostración de diseño y desarrollo de <a href="https://github.com/Laura-M-stack/lenga">Laura Moyano</a>. Fotos: Unsplash.</p>
+    </div>
+  </footer>
+</body>
+</html>
