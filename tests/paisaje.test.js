@@ -122,50 +122,47 @@ test('árboles: se dibujan del fondo al frente (las bases bajan de arriba hacia 
   for (let i = 1; i < ys.length; i++) assert.ok(ys[i] >= ys[i - 1] - 0.05, `orden ${i}`);
 });
 
-test('las coníferas son complejas, con ramas en sentido horario y luces y sombras distintas', () => {
+test('las coníferas se pintan en capas: por piso sombra, tono medio y luz, todo con curvas y sin líneas sueltas', () => {
   const svg = arboles({ seed: 9, cantidad: 3, variantes: 3, id: 'k' });
   const g = svg.match(/<g id="k-c0">(.*?)<\/g>/)[1];
-  const cuerpo = g.match(/class="c(?: b)?" d="([^"]+)"/)[1];
-  const luz = g.match(/class="luz" d="([^"]+)"/)[1];
-  const sombra = g.match(/class="sombra" d="([^"]+)"/)[1];
-  const partes = subtrazos(cuerpo);
-  assert.ok(partes.length > 20, `ramas=${partes.length}`);
-  assert.ok(puntos(cuerpo).length > 300, 'silueta con muchos puntos: nada de triángulos');
-  for (const t of partes) assert.ok(area(puntos(t)) >= 0, 'sentido horario');
-  assert.notEqual(luz, sombra);
-  assert.ok(subtrazos(luz).length > 10 && subtrazos(sombra).length > 10);
-  const todos = [...puntos(cuerpo), ...puntos(luz), ...puntos(sombra)];
-  assert.ok(todos.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y) && y <= 1 && y >= -310), 'base en 0 y copa hacia arriba');
+  const sombras = (g.match(/class="sombra"/g) ?? []).length;
+  const medios = (g.match(/class="c(?: b)?"/g) ?? []).length;
+  assert.ok(medios >= 7, `pisos=${medios}`);
+  assert.equal(sombras, medios + 1); // una sombra por piso más el núcleo de la copa
+  assert.ok((g.match(/class="luz"/g) ?? []).length >= medios - 1);
+  const ds = [...g.matchAll(/ d="([^"]+)"/g)].map((m) => m[1]);
+  for (const d of ds) {
+    assert.match(d, /^M[-\d.]+,[-\d.]+ C/, 'todo son curvas');
+    assert.doesNotMatch(d, / L|NaN|undefined|Infinity/);
+    const n = numeros(d);
+    for (let i = 1; i < n.length; i += 2) assert.ok(n[i] <= 6 && n[i] >= -320, `y=${n[i]}`); // la base queda enterrada unos px en el suelo
+  }
+  assert.doesNotMatch(svg, /class="h"|class="hs"|class="hierba"/);
 });
 
-test('las lengas llevan tronco, copa de matas y algunas son de otoño; sin latifoliados no hay lengas', () => {
+test('cada rama tiene forma propia (no se repite la misma silueta)', () => {
+  const svg = arboles({ seed: 2, cantidad: 2, variantes: 2, id: 'r' });
+  const pisos = [...svg.match(/<g id="r-c0">(.*?)<\/g>/)[1].matchAll(/class="c(?: b)?" d="([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(pisos).size, pisos.length);
+});
+
+test('las lengas llevan tronco, matas lobuladas y algunas son de otoño; sin latifoliados no hay lengas', () => {
   const con = arboles({ seed: 4, cantidad: 10, latifoliados: 0.5, id: 'm' });
   assert.match(con, /<g id="m-l0">/);
   assert.match(con, /class="tronco o"/);
   assert.match(con, /class="c o"/);
-  assert.match(con, /class="bri o"/);
-  assert.match(con, /class="c" d=/);
-  assert.ok(/ Q/.test(con), 'las matas son curvas');
+  assert.match(con, /class="luz o"/);
+  assert.match(con, /class="sombra o"/);
+  assert.match(con, /<g id="m-l1"><path class="tronco"/);
   assert.doesNotMatch(arboles({ seed: 4, cantidad: 10, id: 'm2' }), /<g id="m2-l\d/);
 });
 
-test('los árboles llevan degradados, tronco con franja de luz y hierba en el borde del terreno', () => {
+test('los árboles llevan degradados y tronco con franja de luz', () => {
   const svg = arboles({ seed: 6, cantidad: 8, latifoliados: 0.4, id: 'd' });
   for (const k of ['a', 'b', 'o']) assert.match(svg, new RegExp(`<linearGradient id="d-g${k}"`));
   assert.match(svg, /var\(--ga1\)/);
   assert.match(svg, /class="tl" d=/);
-  assert.match(svg, /class="hierba" d="M/);
   assert.equal((svg.match(/<stop /g) ?? []).length, 9);
-});
-
-test('las hebras de agujas aparecen solo si se piden y son trazos curvos', () => {
-  const sin = arboles({ seed: 6, cantidad: 4, hebras: 0, id: 'h0' });
-  const con = arboles({ seed: 6, cantidad: 4, hebras: 5, id: 'h1' });
-  assert.doesNotMatch(sin, /class="h"|class="hs"/);
-  assert.match(con, /class="h" d="M[^"]* Q/);
-  assert.match(con, /class="hs" d="M[^"]* Q/);
-  assert.doesNotMatch(con, /NaN|undefined|Infinity/);
-  assert.ok(con.length > sin.length);
 });
 
 test('el terreno es ondulado y se aplana donde va la cabaña', () => {

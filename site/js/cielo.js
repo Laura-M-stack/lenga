@@ -37,8 +37,8 @@ export function paleta(p) {
   out.frenteLuz = mezclarHex(out.frente, out.cielo2, 0.2);
   out.frenteSombra = mezclarHex(out.frente, '#04070b', 0.42);
   const dia = 1 - Math.min(1, Math.abs(q - 0.35) / 0.4); // 1 a pleno día, 0 al alba y de noche
-  out.bosqueBrillo = mezclarHex(out.bosqueLuz, '#d4e88e', 0.4 * dia);
-  out.frenteBrillo = mezclarHex(out.frenteLuz, '#d4e88e', 0.4 * dia);
+  out.bosqueBrillo = mezclarHex(out.bosqueLuz, '#c9de8a', 0.22 * dia);
+  out.frenteBrillo = mezclarHex(out.frenteLuz, '#c9de8a', 0.26 * dia);
   out.otonoLuz = mezclarHex(out.otono, out.cielo2, 0.28);
   out.otonoBrillo = mezclarHex(out.otonoLuz, '#ffd27a', 0.55 * dia);
   out.otonoSombra = mezclarHex(out.otono, '#0a0508', 0.42);

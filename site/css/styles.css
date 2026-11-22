@@ -148,21 +148,15 @@ a { color: var(--pino); }
   --fa: url(#frente-ga); --fb: url(#frente-gb); --fo: url(#frente-go);
 }
 .capa--frente .suelo { fill: var(--c-frente); }
-.hierba { fill: var(--t-luz); }
 .c { fill: var(--fa); }
 .c.b { fill: var(--fb); }
 .c.o { fill: var(--fo); }
-.luz { fill: var(--t-luz); opacity: 0.9; }
-.sombra { fill: var(--t-sombra); opacity: 0.85; }
+.luz { fill: var(--t-brillo); }
+.sombra { fill: var(--t-sombra); }
 .tronco { fill: var(--t-tronco); }
 .tl { fill: var(--t-tronco-luz); }
-.h, .hs { fill: none; stroke-linecap: round; }
-.h { stroke: var(--t-brillo); stroke-width: 1.05; opacity: 0.7; }
-.hs { stroke: var(--t-sombra); stroke-width: 1.05; opacity: 0.6; }
-.bri { fill: var(--t-brillo); opacity: 0.75; }
 .luz.o { fill: var(--c-otono-luz); }
 .sombra.o { fill: var(--c-otono-sombra); }
-.bri.o { fill: var(--c-otono-brillo); opacity: 0.85; }
 .tronco.o { fill: var(--t-tronco); }
 .tl.o { fill: var(--t-tronco-luz); }
 /* Cabaña: los colores vienen de la paleta del momento del día (JS); estos son los del mediodía por si el JS no corre */

@@ -86,7 +86,7 @@ export function nieve(opts, { linea = 0.7 } = {}) {
     const tramo = pts.slice(i, j + 1);
     for (let k = tramo.length - 1; k >= 0; k--) {
       const [x, y] = tramo[k];
-      const espesor = (yLinea - y) * (k % 2 ? 0.18 + rnd() * 0.22 : 0.45 + rnd() * 0.4);
+      const espesor = (yLinea - y) * (0.3 + 0.18 * Math.sin(k * 0.9) + rnd() * 0.12);
       abajo.push([x, f(lim(y + espesor, o.alto))]);
     }
     d += `${d ? ' ' : ''}M${[...arriba, ...abajo].map(([x, y]) => `${x},${y}`).join(' L')} Z`;
@@ -144,188 +144,171 @@ const area = (pts) => {
   }
   return a / 2;
 };
-/** Polígono cerrado siempre en sentido horario: así los trazos que se superponen se suman y no se cancelan entre sí. */
-const poli = (pts) => {
-  const p = area(pts) < 0 ? [...pts].reverse() : pts;
-  return `M${p.map(([x, y]) => `${f(x)},${f(y)}`).join(' L')} Z`;
-};
+const NOMINAL = 300; // alto con el que se dibuja cada variante de árbol; después se escala
 
-/** Igual que `poli`, pero redondeado: curvas que pasan por los puntos medios, para matas de hojas y no facetas. */
-const redondo = (pts) => {
+/**
+ * Curva cerrada suave (Catmull-Rom convertida a Bézier cúbicas) que pasa por todos los puntos, en sentido horario.
+ * Es lo que hace que ramas y copas se vean pintadas y no facetadas, a cualquier tamaño de pantalla.
+ */
+const curva = (pts, tension = 1) => {
   const p = area(pts) < 0 ? [...pts].reverse() : pts;
-  const m = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const n = p.length;
-  const ini = m(p[0], p[1]);
-  let d = `M${f(ini[0])},${f(ini[1])}`;
-  for (let i = 1; i <= n; i++) {
-    const c = p[i % n];
-    const e = m(c, p[(i + 1) % n]);
-    d += ` Q${f(c[0])},${f(c[1])} ${f(e[0])},${f(e[1])}`;
+  const k = tension / 6;
+  let d = `M${f(p[0][0])},${f(p[0][1])}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = p[(i - 1 + n) % n];
+    const p1 = p[i];
+    const p2 = p[(i + 1) % n];
+    const p3 = p[(i + 2) % n];
+    d += ` C${f(p1[0] + (p2[0] - p0[0]) * k)},${f(p1[1] + (p2[1] - p0[1]) * k)} ${f(p2[0] - (p3[0] - p1[0]) * k)},${f(p2[1] - (p3[1] - p1[1]) * k)} ${f(p2[0])},${f(p2[1])}`;
   }
   return `${d} Z`;
 };
 
-const NOMINAL = 300; // alto con el que se dibuja cada variante de árbol; después se escala
-
 /**
- * Una rama de conífera, en coordenadas locales (sale del tronco en 0,0 hacia +x): el borde de arriba es suave y
- * arqueado, la punta se levanta un poco y el borde de abajo termina en agujas largas que cuelgan. Además de las caras
- * de luz y sombra devuelve hebras (trazos finos claros arriba y oscuros abajo) que dan la textura de las agujas.
+ * Una rama de conífera en coordenadas locales (sale del tronco en 0,0 hacia +x). Se pinta en tres capas que comparten
+ * la misma forma, como en una ilustración: `base` es la silueta completa (va en sombra), `medio` la misma rama con
+ * los mechones de abajo más cortos (deja ver la sombra debajo) y `luz` una franja sobre el lomo de la rama.
  */
-function fronda(rnd, L, caida, grosor, dientes, diente, sube, bandaLuz, bandaSombra, hebras) {
-  const centro = (t) => caida * t ** 1.5 - sube * t ** 4;
-  const th = (t) => grosor * (0.8 * Math.sin(Math.PI * t ** 0.7) + 0.35 * (1 - t));
-  const arriba = (t) => [L * t, centro(t) - th(t) * 0.42];
-  const NT = 6;
-  const sup = [];
-  for (let k = 0; k <= NT; k++) {
-    const [x, y] = arriba(k / NT);
-    sup.push([x, y + (k > 0 && k < NT ? (rnd() - 0.5) * grosor * 0.22 : 0)]);
-  }
-  const inf = [];
-  for (let j = dientes; j >= 1; j--) {
-    const tp = (j - 0.2) / dientes;
-    const tv = (j - 0.7) / dientes;
-    // las agujas cuelgan hacia abajo y un poco hacia afuera
-    inf.push([L * tp + diente * (0.25 + rnd() * 0.35), centro(tp) + th(tp) * 0.55 + diente * (0.8 + rnd() * 0.8)]);
-    inf.push([L * tv, centro(tv) + th(tv) * 0.45]);
-  }
-  const cuerpo = [...sup, ...inf, [0, centro(0) + th(0) * 0.5]];
-  const ts = [0.1, 0.3, 0.5, 0.7, 0.85, 0.97];
-  const luz = [...ts.map((t) => arriba(t)), ...[...ts].reverse().map((t) => [L * t, arriba(t)[1] + th(t) * bandaLuz])];
-  const dentro = inf.filter(([x]) => x > L * 0.3);
-  const sombra = [...dentro, ...ts.map((t) => [L * t, centro(t) + th(t) * (0.55 - bandaSombra)]).filter(([x]) => x <= (dentro[0]?.[0] ?? L))];
-  const claras = [];
-  const oscuras = [];
-  for (let k = 0; k < hebras; k++) {
-    const arr = k % 2 === 0;
-    const t0 = 0.1 + rnd() * 0.25;
-    const t1 = 0.5 + rnd() * 0.4;
-    const p0 = [L * t0, centro(t0) + th(t0) * (arr ? -0.35 + rnd() * 0.3 : 0.1 + rnd() * 0.35)];
-    const p1 = [L * t1, centro(t1) + th(t1) * (arr ? -0.2 + rnd() * 0.3 : 0.25 + rnd() * 0.4) + diente * 0.3 * rnd()];
-    (arr ? claras : oscuras).push([p0, [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + L * 0.09], p1]);
-  }
-  return { cuerpo, luz, sombra, claras, oscuras };
+function rama(rnd, { L, caida, grosor, mechones, colgar, sube, franja }) {
+  const espina = (t) => caida * t ** 1.6 - sube * t ** 4;
+  const th = (t) => grosor * (0.72 * Math.sin(Math.PI * Math.min(1, t ** 0.75)) + 0.3 * (1 - t) + 0.08);
+  const ruido = Array.from({ length: 7 }, () => (rnd() - 0.5) * 0.16);
+  const mech = Array.from({ length: mechones }, (_, j) => {
+    const tc = Math.min(0.97, (j + 0.65 + (rnd() - 0.5) * 0.3) / mechones);
+    return { tc, cuelga: colgar * (0.6 + rnd() * 0.8) * (0.45 + tc * 0.75), lean: colgar * (0.15 + rnd() * 0.4) };
+  });
+  const lomo = (t, k) => [L * t, espina(t) - th(t) * 0.45 + ruido[Math.round(t * 6)] * grosor + k];
+  const forma = (bajo) => {
+    const arriba = Array.from({ length: 7 }, (_, k) => lomo(k / 6, 0));
+    const punta = [L * 1.04, espina(1) + th(1) * 0.15];
+    const abajo = [];
+    for (let j = mech.length - 1; j >= 0; j--) {
+      const m = mech[j];
+      const tn = Math.max(0.02, m.tc - 0.5 / mechones);
+      abajo.push([L * m.tc + m.lean * bajo, espina(m.tc) + th(m.tc) * 0.4 + m.cuelga * bajo]);
+      abajo.push([L * tn, espina(tn) + th(tn) * (0.15 + 0.2 * bajo)]);
+    }
+    abajo.push([0, espina(0) + th(0) * 0.3]);
+    return [...arriba, punta, ...abajo];
+  };
+  const ts = [0.08, 0.25, 0.42, 0.6, 0.78, 0.94];
+  const luz = [
+    ...ts.map((t) => lomo(t, grosor * 0.02)),
+    ...[...ts].reverse().map((t, i) => [L * t, espina(t) - th(t) * (0.45 - franja * (0.75 + 0.35 * Math.sin(i * 1.7)))]),
+  ];
+  return { base: forma(1), medio: forma(0.42), luz };
 }
 
-const trazo = (pts) => `M${f(pts[0][0])},${f(pts[0][1])} Q${f(pts[1][0])},${f(pts[1][1])} ${f(pts[2][0])},${f(pts[2][1])}`;
-
 /**
- * Una conífera dibujada con `NOMINAL` de alto, con la base en 0,0 y la copa hacia arriba (y negativo): tronco recto a
- * la vista con su borde claro, ramas largas que caen y se levantan en la punta, agujas colgando, y una flecha fina arriba.
- * Devuelve el tronco, el cuerpo, las caras de luz y sombra y las hebras claras y oscuras de cada rama.
+ * Una conífera dibujada con `NOMINAL` de alto, con la base en 0,0 y la copa hacia arriba (y negativo): tronco a la
+ * vista, núcleo oscuro, pisos de ramas que caen y se superponen (los de arriba tapan a los de abajo) y una guía arriba.
+ * Devuelve el tronco y una lista de pisos, cada uno con su sombra, su tono medio y su luz.
  */
-function coniferaVariante(rnd, ancho, detalle, hebras) {
+function coniferaVariante(rnd, ancho, detalle) {
   const H = NOMINAL;
   const W = H * ancho;
-  const niveles = Math.max(7, Math.round((15 + rnd() * 8) * detalle));
-  const sp = (H * 0.8) / (niveles - 1);
+  const niveles = Math.max(6, Math.round((11 + rnd() * 5) * detalle));
+  const sp = (H * 0.82) / (niveles - 1);
   const inclina = (rnd() - 0.5) * H * 0.05;
   const cx = (y) => (inclina * -y) / H;
-  const cuerpo = [];
-  const luz = [];
-  const sombra = [];
-  const claras = [];
-  const oscuras = [];
   const colocar = (pts, ay, sgn) => pts.map(([x, y]) => [cx(ay) + sgn * x, ay + y]);
+  const pisos = [];
   for (let i = 0; i < niveles; i++) {
     const u = i / (niveles - 1);
-    const y0 = -H * 0.95 + u * H * 0.8;
-    const prof = Math.pow(0.1 + 0.9 * u, 1.0);
-    for (const sgn of [1, -1]) {
-      if (u > 0.1 && u < 0.9 && rnd() < 0.1) continue; // a veces falta una rama: el contorno no queda parejo
-      const L = (W / 2) * prof * (0.55 + rnd() * 0.75);
-      const caida = L * (0.2 + rnd() * 0.25 + 0.12 * u);
-      const grosor = Math.max(sp * 2.0, L * 0.3);
-      const dientes = Math.max(2, Math.round((L / (H * 0.026)) * (0.55 + 0.45 * detalle)));
-      const ay = y0 + (rnd() - 0.5) * sp * 0.9;
-      const fr = fronda(rnd, L, caida, grosor, dientes, H * (0.018 + rnd() * 0.02), L * (0.08 + rnd() * 0.12), sgn > 0 ? 0.3 : 0.42, sgn > 0 ? 0.45 : 0.3, hebras);
-      cuerpo.push(poli(colocar(fr.cuerpo, ay, sgn)));
-      luz.push(poli(colocar(fr.luz, ay, sgn)));
-      sombra.push(poli(colocar(fr.sombra, ay, sgn)));
-      for (const h of fr.claras) claras.push(trazo(colocar(h, ay, sgn)));
-      for (const h of fr.oscuras) oscuras.push(trazo(colocar(h, ay, sgn)));
+    const y0 = -H * 0.9 + u * H * 0.78;
+    const prof = 0.14 + 0.86 * u ** 0.95;
+    const piso = { base: [], medio: [], luz: [] };
+    for (const sgn of [-1, 1]) {
+      if (u > 0.15 && u < 0.9 && rnd() < 0.08) continue; // a veces falta una rama: el contorno no queda parejo
+      const L = (W / 2) * prof * (0.7 + rnd() * 0.5);
+      const r = rama(rnd, {
+        L,
+        caida: L * (0.22 + rnd() * 0.2 + 0.14 * u),
+        grosor: Math.max(sp * 1.7, L * 0.3),
+        mechones: Math.max(2, Math.round((L / (H * 0.055)) * (0.7 + 0.3 * detalle))),
+        colgar: H * (0.02 + rnd() * 0.02) * (0.6 + 0.6 * u),
+        sube: L * (0.06 + rnd() * 0.1),
+        franja: sgn < 0 ? 0.5 : 0.28, // la luz viene de la izquierda
+      });
+      const ay = y0 + (rnd() - 0.5) * sp * 0.6;
+      piso.base.push(curva(colocar(r.base, ay, sgn)));
+      piso.medio.push(curva(colocar(r.medio, ay, sgn)));
+      piso.luz.push(curva(colocar(r.luz, ay, sgn)));
     }
+    if (piso.base.length) pisos.push({ base: piso.base.join(' '), medio: piso.medio.join(' '), luz: piso.luz.join(' ') });
   }
-  // Tronco recto y afinado, con una franja clara del lado de la luz (los dos se ven entre rama y rama)
-  const tw = H * 0.03;
-  const ancho1 = (y) => tw * (0.45 + 0.55 * (1 - Math.min(1, -y / (H * 0.95))) ** 1.2);
-  const ys = [0, -H * 0.06, -H * 0.2, -H * 0.45, -H * 0.7, -H * 0.93];
-  const izqT = ys.map((y) => [cx(y) - ancho1(y) * (y === 0 ? 1.3 : 1), y]);
-  const derT = ys.map((y) => [cx(y) + ancho1(y) * (y === 0 ? 1.3 : 1), y]).reverse();
-  const flecha = [[cx(-H), -H], [cx(-H * 0.9) + H * 0.025, -H * 0.9], [cx(-H * 0.9) - H * 0.025, -H * 0.9]];
-  const franja = ys.slice(0, 5).map((y) => [cx(y) - ancho1(y), y]).concat(ys.slice(0, 5).map((y) => [cx(y) - ancho1(y) * 0.1, y]).reverse());
-  return {
-    tr: [poli([...izqT, ...derT]), poli(flecha)].join(' '),
-    tl: poli(franja),
-    c: cuerpo.join(' '),
-    l: luz.join(' '),
-    s: sombra.join(' '),
-    h: claras.join(' '),
-    hs: oscuras.join(' '),
-    tono: rnd() < 0.4 ? ' b' : '',
-  };
+  // guía: el brote recto de la punta
+  const gw = H * 0.03;
+  const guia = [[cx(-H), -H], [cx(-H * 0.95) + gw * 0.6, -H * 0.95], [cx(-H * 0.88) + gw, -H * 0.87], [cx(-H * 0.88) - gw, -H * 0.87], [cx(-H * 0.95) - gw * 0.6, -H * 0.95]];
+  pisos.push({ base: curva(guia), medio: curva(guia.map(([x, y]) => [x * 0.75 + cx(-H) * 0.25, y + 2])), luz: '' });
+  pisos.reverse(); // se dibujan de abajo hacia arriba: cada piso cae sobre el de abajo
+
+  const tw = H * 0.028;
+  const grueso = (y) => tw * (0.4 + 0.6 * (1 - Math.min(1, -y / (H * 0.95))) ** 1.3);
+  const ys = [0, -H * 0.04, -H * 0.15, -H * 0.4, -H * 0.65, -H * 0.92];
+  const izq = ys.map((y, i) => [cx(y) - grueso(y) * (i === 0 ? 1.7 : 1), y]);
+  const der = ys.map((y, i) => [cx(y) + grueso(y) * (i === 0 ? 1.7 : 1), y]).reverse();
+  const franja = [...ys.slice(0, 5).map((y, i) => [cx(y) - grueso(y) * (i === 0 ? 1.5 : 0.9), y]), ...ys.slice(0, 5).map((y) => [cx(y) - grueso(y) * 0.15, y]).reverse()];
+  // núcleo: la sombra profunda del interior de la copa, visible entre las ramas
+  const nucleo = [[cx(-H * 0.9), -H * 0.92], [cx(-H * 0.5) + W * 0.12, -H * 0.5], [cx(-H * 0.15) + W * 0.17, -H * 0.14], [cx(-H * 0.15) - W * 0.17, -H * 0.14], [cx(-H * 0.5) - W * 0.12, -H * 0.5]];
+  return { nucleo: curva(nucleo), tronco: curva([...izq, ...der], 0.6), tl: curva(franja, 0.6), pisos, tono: rnd() < 0.4 ? ' b' : '' };
 }
 
-/** Una mata de hojas redonda y ancha, como una nube: su cuerpo, la media luna de luz, la de sombra y un filo de brillo. */
-function matas(rnd, cx, cy, r) {
-  const n = 14;
-  const ancho = 1.25 + rnd() * 0.35;
-  const rad = Array.from({ length: n }, () => 0.86 + rnd() * 0.26);
-  const pt = (k, esc, dx, dy) => {
-    const a = (k / n) * Math.PI * 2;
-    return [cx + Math.cos(a) * r * ancho * rad[k % n] * esc + dx * ancho, cy + Math.sin(a) * r * 0.82 * rad[k % n] * esc + dy];
+/** Una mata de hojas de borde lobulado: silueta (sombra), tono medio un poco corrido hacia la luz y una media luna de luz. */
+function mata(rnd, cx, cy, r) {
+  const n = 22;
+  const ancho = 1.15 + rnd() * 0.3;
+  const lobulos = 5 + Math.floor(rnd() * 3);
+  const fase = rnd() * 6.28;
+  const rad = Array.from({ length: n }, (_, k) => 1 + 0.09 * Math.sin((k / n) * 6.2832 * lobulos + fase) + (rnd() - 0.5) * 0.1);
+  const forma = (esc, dx, dy, desde = 0, hasta = n) =>
+    rad.slice(desde, hasta).map((q, i) => {
+      const a = ((i + desde) / n) * 6.2832;
+      return [cx + dx + Math.cos(a) * r * ancho * q * esc, cy + dy + Math.sin(a) * r * 0.82 * q * esc];
+    });
+  const desde = Math.round(n * 0.5);
+  const hasta = Math.round(n * 0.86);
+  return {
+    base: forma(1, 0, 0),
+    medio: forma(0.86, -r * 0.1, -r * 0.12),
+    luz: [...forma(0.84, -r * 0.1, -r * 0.12, desde, hasta), ...forma(0.6, r * 0.04, r * 0.02, desde, hasta).reverse()],
   };
-  const cuerpo = Array.from({ length: n }, (_, k) => pt(k, 1, 0, 0));
-  const luna = (ks, esc, dx, dy) => [...ks.map((k) => pt(k, 1, 0, 0)), ...[...ks].reverse().map((k) => pt(k, esc, dx, dy))];
-  return { cuerpo, luz: luna([8, 9, 10, 11], 0.72, -r * 0.1, -r * 0.08), sombra: luna([1, 2, 3, 4, 5], 0.76, r * 0.07, r * 0.07), brillo: luna([9, 10, 11], 0.9, -r * 0.05, -r * 0.04) };
 }
 
 /**
- * Una lenga con `NOMINAL` de alto: tronco que se abre en ramas, copa hecha de muchas matas redondas que dejan ver el
- * cielo entre ellas, con brillos y hojas sueltas en el borde. En otoño las lengas se ponen rojas y naranjas.
+ * Una lenga con `NOMINAL` de alto: tronco curvo que se abre en ramas y una copa hecha de matas lobuladas que dejan ver
+ * el cielo entre ellas. En otoño las lengas se ponen rojas y naranjas.
  */
 function lengaVariante(rnd, ancho, detalle, otono) {
   const H = NOMINAL;
   const rx = (H * ancho) / 2;
-  const ry = H * (0.2 + rnd() * 0.06);
-  const cy = -H * 0.68;
-  const fork = [0, -H * 0.4];
-  const puntas = [[-0.62, 0.1], [0.6, 0.12], [-0.3, -0.55], [0.32, -0.6], [0, -0.1]].map(([a, b]) => [rx * a, cy + ry * b]);
-  const extra = Math.max(6, Math.round(20 * detalle));
+  const ry = H * (0.2 + rnd() * 0.05);
+  const cy = -H * 0.66;
+  const fy = -H * 0.38;
+  const puntas = [[-0.6, 0.15], [0.62, 0.1], [-0.28, -0.5], [0.3, -0.55], [0.02, -0.15]].map(([a, b]) => [rx * a, cy + ry * b]);
   const centros = [...puntas];
+  const extra = Math.max(6, Math.round(16 * detalle));
   for (let i = 0; i < extra; i++) {
     const ang = rnd() * Math.PI * 2;
-    const d = Math.sqrt(rnd()) * 0.92;
+    const d = Math.sqrt(rnd()) * 0.9;
     centros.push([rx * d * Math.cos(ang), cy + ry * d * Math.sin(ang)]);
   }
-  const cuerpo = [];
-  const luz = [];
-  const sombra = [];
-  const brillo = [];
-  for (const [x, y] of centros) {
-    const m = matas(rnd, x, y, H * (0.06 + rnd() * 0.04));
-    cuerpo.push(redondo(m.cuerpo));
-    luz.push(redondo(m.luz));
-    sombra.push(redondo(m.sombra));
-    brillo.push(redondo(m.brillo));
-  }
-  // hojas sueltas: matas chicas en el borde de la copa, para que el contorno no sea liso
-  const sueltas = Math.max(4, Math.round(12 * detalle));
-  for (let i = 0; i < sueltas; i++) {
-    const ang = rnd() * Math.PI * 2;
-    const d = 0.98 + rnd() * 0.22;
-    const m = matas(rnd, rx * d * Math.cos(ang), cy + ry * d * Math.sin(ang), H * (0.018 + rnd() * 0.02));
-    cuerpo.push(redondo(m.cuerpo));
-  }
-  const tw = H * 0.026;
-  const tronco = [[-tw * 1.6, 0], [-tw * 1.1, -H * 0.08], [-tw * 0.8, -H * 0.3], [-tw * 0.7, fork[1]], [tw * 0.7, fork[1]], [tw * 0.8, -H * 0.3], [tw * 1.1, -H * 0.08], [tw * 1.6, 0]];
-  const ramas = puntas.map(([x, y]) => {
-    const wb = tw * 0.7;
-    return poli([[fork[0] - wb, fork[1]], [fork[0] + wb, fork[1]], [x + wb * 0.3, y + 6], [x - wb * 0.3, y + 6]]);
+  centros.sort((a, b) => b[1] - a[1]); // de abajo hacia arriba: las matas de arriba tapan a las de abajo
+  const matas = centros.map(([x, y]) => {
+    const m = mata(rnd, x, y, H * (0.065 + rnd() * 0.035));
+    return { base: curva(m.base), medio: curva(m.medio), luz: curva(m.luz) };
   });
-  const franja = poli([[-tw * 1.6, 0], [-tw * 1.1, -H * 0.08], [-tw * 0.8, -H * 0.3], [-tw * 0.7, fork[1]], [-tw * 0.1, fork[1]], [-tw * 0.1, -H * 0.3], [-tw * 0.2, -H * 0.08], [-tw * 0.3, 0]]);
-  return { tronco: [poli(tronco), ...ramas].join(' '), tl: franja, c: cuerpo.join(' '), l: luz.join(' '), s: sombra.join(' '), b: brillo.join(' '), otono };
+  const tw = H * 0.026;
+  const tronco = curva([[-tw * 1.8, 0], [-tw, -H * 0.1], [-tw * 0.8, -H * 0.28], [-tw * 0.9, fy], [tw * 0.9, fy], [tw * 0.8, -H * 0.28], [tw, -H * 0.1], [tw * 1.8, 0]], 0.6);
+  const ramas = puntas.map(([x, y]) => {
+    const w = tw * 0.75;
+    const mx = x * 0.45;
+    const my = fy + (y - fy) * 0.5 - H * 0.02;
+    return curva([[-w, fy + 4], [mx - w * 0.6, my], [x, y + 8], [mx + w * 0.6, my], [w, fy + 4]], 0.7);
+  });
+  const tl = curva([[-tw * 1.6, 0], [-tw * 0.95, -H * 0.1], [-tw * 0.75, -H * 0.28], [-tw * 0.8, fy], [-tw * 0.15, fy], [-tw * 0.15, -H * 0.28], [-tw * 0.3, -H * 0.1], [-tw * 0.4, 0]], 0.6);
+  return { tronco: [tronco, ...ramas].join(' '), tl, matas, otono };
 }
 
 function degradados(id) {
@@ -333,19 +316,9 @@ function degradados(id) {
   return g('a') + g('b') + g('o');
 }
 
-/** Hierba en el borde del terreno: matas de briznas finas y de largo distinto. */
-function hierba(rnd, ancho, relieve) {
-  let d = '';
-  for (let x = 4; x < ancho; x += 9 + rnd() * 10) {
-    const y = relieve(x) + 2;
-    const h = 5 + rnd() * 11;
-    const lean = (rnd() - 0.5) * 7;
-    d += `M${f(x)},${f(y)} L${f(x + lean)},${f(y - h)} L${f(x + 3)},${f(y)} `;
-  }
-  return d.trim();
-}
+const capasDe = (partes, c, o = '') => partes.map((p) => `<path class="sombra${o}" d="${p.base}"/><path class="${c}" d="${p.medio}"/>${p.luz ? `<path class="luz${o}" d="${p.luz}"/>` : ''}`).join('');
 
-function generarArboles({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin = 120, hMax = 260, suelo = 0.05, latifoliados = 0, detalle = 1, variantes = 8, hebras = 0, llano = null, id = 'a' }) {
+function generarArboles({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin = 120, hMax = 260, suelo = 0.05, latifoliados = 0, detalle = 1, variantes = 8, llano = null, id = 'a' }) {
   const rnd = mulberry32(seed);
   const g = alto * suelo;
   const yb = alto - g;
@@ -362,16 +335,15 @@ function generarArboles({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin 
   for (let x = 0; x <= ancho; x += paso) pts.push(`${x},${f(relieve(x))}`);
   if (ancho % paso !== 0) pts.push(`${ancho},${f(relieve(ancho))}`);
   const terreno = `M0,${alto} L${pts.join(' L')} L${ancho},${alto} Z`;
-  const pasto = hierba(rnd, ancho, relieve);
 
-  const conif = Array.from({ length: Math.max(1, variantes) }, () => coniferaVariante(rnd, 0.26 + rnd() * 0.18, detalle, hebras));
+  const conif = Array.from({ length: Math.max(1, variantes) }, () => coniferaVariante(rnd, 0.3 + rnd() * 0.16, detalle));
   const lengas = latifoliados > 0 ? Array.from({ length: 4 }, (_, k) => lengaVariante(rnd, 0.62 + rnd() * 0.2, detalle, k % 3 === 0)) : [];
   const defs = [
     degradados(id),
-    ...conif.map((t, k) => `<g id="${id}-c${k}"><path class="tronco" d="${t.tr}"/><path class="tl" d="${t.tl}"/><path class="c${t.tono}" d="${t.c}"/><path class="sombra" d="${t.s}"/><path class="luz" d="${t.l}"/>${t.hs ? `<path class="hs" d="${t.hs}"/>` : ''}${t.h ? `<path class="h" d="${t.h}"/>` : ''}</g>`),
+    ...conif.map((t, k) => `<g id="${id}-c${k}"><path class="sombra" d="${t.nucleo}"/><path class="tronco" d="${t.tronco}"/><path class="tl" d="${t.tl}"/>${capasDe(t.pisos, `c${t.tono}`)}</g>`),
     ...lengas.map((t, k) => {
       const o = t.otono ? ' o' : '';
-      return `<g id="${id}-l${k}"><path class="tronco${o}" d="${t.tronco}"/><path class="tl${o}" d="${t.tl}"/><path class="c${o}" d="${t.c}"/><path class="sombra${o}" d="${t.s}"/><path class="luz${o}" d="${t.l}"/><path class="bri${o}" d="${t.b}"/></g>`;
+      return `<g id="${id}-l${k}"><path class="tronco${o}" d="${t.tronco}"/><path class="tl${o}" d="${t.tl}"/>${capasDe(t.matas, `c${o}`, o)}</g>`;
     }),
   ].join('');
 
@@ -386,17 +358,17 @@ function generarArboles({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin 
     return { z: base, uso: `<use href="#${ref}" transform="translate(${f(x)} ${f(base)}) scale(${f(k * wf * 100) / 100} ${f(k * 100) / 100})"/>` };
   });
   lista.sort((a, b) => a.z - b.z); // los más lejanos primero, para que los de adelante los tapen
-  return { terreno, pasto, defs, lista, conif, lengas };
+  return { terreno, defs, lista };
 }
 
 /**
  * Terreno y árboles como markup SVG. Se dibujan unas pocas variantes de conífera y de lenga y se reparten con <use>,
  * cada una con su tamaño y ancho, de atrás hacia adelante. `latifoliados` es la fracción de lengas; `detalle` baja la
- * cantidad de ramas en los árboles lejanos y `hebras` es cuántos trazos de agujas lleva cada rama.
+ * cantidad de ramas y matas en los árboles lejanos, que no necesitan tanto.
  */
 export function arboles(opts) {
-  const { terreno, pasto, defs, lista } = generarArboles(opts);
-  return `<path class="suelo" d="${terreno}"/><path class="hierba" d="${pasto}"/><defs>${defs}</defs>${lista.map((t) => t.uso).join('')}`;
+  const { terreno, defs, lista } = generarArboles(opts);
+  return `<path class="suelo" d="${terreno}"/><defs>${defs}</defs>${lista.map((t) => t.uso).join('')}`;
 }
 
 /** Cabaña de troncos para el primer plano (markup SVG; los colores salen de variables CSS). */
@@ -461,14 +433,14 @@ export function capasEscena() {
       paths: [cordillera({ seed: 37, base: 0.1, amplitud: 0.16, rugosidad: 0.5 })],
       caras: '',
       nieve: '',
-      extra: arboles({ seed: 41, cantidad: 130, hMin: 90, hMax: 210, latifoliados: 0.14, detalle: 0.55, variantes: 7, hebras: 0, id: 'bosque' }),
+      extra: arboles({ seed: 41, cantidad: 130, hMin: 90, hMax: 210, latifoliados: 0.14, detalle: 0.55, variantes: 7, id: 'bosque' }),
     },
     {
       id: 'frente',
       paths: [],
       caras: '',
       nieve: '',
-      extra: arboles({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, latifoliados: 0.1, detalle: 1, variantes: 6, hebras: 5, llano: { x: 1450, r: 260 }, id: 'frente' }) + cabana(1450, ALTO * 0.93),
+      extra: arboles({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, latifoliados: 0.1, detalle: 1, variantes: 6, llano: { x: 1450, r: 260 }, id: 'frente' }) + cabana(1450, ALTO * 0.93),
     },
   ];
 }
