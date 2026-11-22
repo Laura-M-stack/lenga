@@ -255,60 +255,69 @@ function coniferaVariante(rnd, ancho, detalle) {
   return { nucleo: curva(nucleo), tronco: curva([...izq, ...der], 0.6), tl: curva(franja, 0.6), pisos, tono: rnd() < 0.4 ? ' b' : '' };
 }
 
-/** Una mata de hojas de borde lobulado: silueta (sombra), tono medio un poco corrido hacia la luz y una media luna de luz. */
+/** Una mata de hojas chata y ancha, de borde apenas ondulado: silueta (sombra), tono medio corrido hacia la luz y una franja de luz arriba. */
 function mata(rnd, cx, cy, r) {
-  const n = 22;
-  const ancho = 1.15 + rnd() * 0.3;
-  const lobulos = 5 + Math.floor(rnd() * 3);
+  const n = 24;
+  const ancho = 1.45 + rnd() * 0.35;
+  const alto = 0.72 + rnd() * 0.12;
+  const lobulos = 6 + Math.floor(rnd() * 4);
   const fase = rnd() * 6.28;
-  const rad = Array.from({ length: n }, (_, k) => 1 + 0.09 * Math.sin((k / n) * 6.2832 * lobulos + fase) + (rnd() - 0.5) * 0.1);
+  const rad = Array.from({ length: n }, (_, k) => {
+    const a = (k / n) * 6.2832;
+    const abajo = Math.sin(a) > 0 ? 0.82 : 1; // la parte de abajo más recta, como un piso de follaje
+    return abajo * (1 + 0.05 * Math.sin(a * lobulos + fase) + (rnd() - 0.5) * 0.06);
+  });
   const forma = (esc, dx, dy, desde = 0, hasta = n) =>
     rad.slice(desde, hasta).map((q, i) => {
       const a = ((i + desde) / n) * 6.2832;
-      return [cx + dx + Math.cos(a) * r * ancho * q * esc, cy + dy + Math.sin(a) * r * 0.82 * q * esc];
+      return [cx + dx + Math.cos(a) * r * ancho * q * esc, cy + dy + Math.sin(a) * r * alto * q * esc];
     });
-  const desde = Math.round(n * 0.5);
-  const hasta = Math.round(n * 0.86);
+  const desde = Math.round(n * 0.52);
+  const hasta = Math.round(n * 0.94);
   return {
     base: forma(1, 0, 0),
-    medio: forma(0.86, -r * 0.1, -r * 0.12),
-    luz: [...forma(0.84, -r * 0.1, -r * 0.12, desde, hasta), ...forma(0.6, r * 0.04, r * 0.02, desde, hasta).reverse()],
+    medio: forma(0.9, -r * 0.08, -r * 0.08),
+    luz: [...forma(0.9, -r * 0.08, -r * 0.08, desde, hasta), ...forma(0.62, r * 0.05, r * 0.02, desde, hasta).reverse()],
   };
 }
 
 /**
- * Una lenga con `NOMINAL` de alto: tronco curvo que se abre en ramas y una copa hecha de matas lobuladas que dejan ver
- * el cielo entre ellas. En otoño las lengas se ponen rojas y naranjas.
+ * Una lenga con `NOMINAL` de alto: tronco fino que se abre en ramas y un follaje en pisos horizontales, hecho de
+ * matas chatas que dejan ver el cielo entre un piso y otro, como crecen las lengas en el bosque andino.
  */
-function lengaVariante(rnd, ancho, detalle, otono) {
+function lengaVariante(rnd, ancho, detalle) {
   const H = NOMINAL;
   const rx = (H * ancho) / 2;
-  const ry = H * (0.2 + rnd() * 0.05);
-  const cy = -H * 0.66;
-  const fy = -H * 0.38;
-  const puntas = [[-0.6, 0.15], [0.62, 0.1], [-0.28, -0.5], [0.3, -0.55], [0.02, -0.15]].map(([a, b]) => [rx * a, cy + ry * b]);
-  const centros = [...puntas];
-  const extra = Math.max(6, Math.round(16 * detalle));
-  for (let i = 0; i < extra; i++) {
-    const ang = rnd() * Math.PI * 2;
-    const d = Math.sqrt(rnd()) * 0.9;
-    centros.push([rx * d * Math.cos(ang), cy + ry * d * Math.sin(ang)]);
+  const tw = H * 0.02;
+  const fy = -H * 0.34;
+  const pisosN = 5 + Math.floor(rnd() * 2);
+  const matas = [];
+  const ramas = [];
+  for (let i = 0; i < pisosN; i++) {
+    const u = i / (pisosN - 1); // 0 = piso de abajo
+    const y = -H * (0.44 + u * 0.44) + (rnd() - 0.5) * H * 0.02;
+    const semi = rx * (1 - u * 0.6) * (0.7 + rnd() * 0.45);
+    const desvio = (rnd() - 0.5) * rx * 0.45;
+    const cant = Math.max(3, Math.round((4 + (1 - u) * 4) * (0.6 + 0.4 * detalle)));
+    for (let k = 0; k < cant; k++) {
+      const t = cant === 1 ? 0.5 : k / (cant - 1);
+      const x = desvio + (t * 2 - 1) * semi + (rnd() - 0.5) * semi * 0.2;
+      const m = mata(rnd, x, y + Math.abs(t * 2 - 1) * H * 0.025 + (rnd() - 0.5) * H * 0.015, H * (0.065 + rnd() * 0.025) * (1 - u * 0.3));
+      matas.push({ y, base: curva(m.base), medio: curva(m.medio), luz: curva(m.luz) });
+    }
+    // ramas finas que suben desde el tronco hasta los extremos de cada piso
+    for (const lado of [-1, 1]) {
+      const xe = desvio + lado * semi * 0.75;
+      const w = tw * (0.55 - u * 0.2);
+      const y0 = Math.max(fy, y + H * 0.12);
+      ramas.push(curva([[-w, y0 + 3], [xe * 0.5 - w * 0.5, (y0 + y) / 2 + H * 0.02], [xe, y + 4], [xe * 0.5 + w * 0.5, (y0 + y) / 2 + H * 0.03], [w, y0 + 3]], 0.7));
+    }
   }
-  centros.sort((a, b) => b[1] - a[1]); // de abajo hacia arriba: las matas de arriba tapan a las de abajo
-  const matas = centros.map(([x, y]) => {
-    const m = mata(rnd, x, y, H * (0.065 + rnd() * 0.035));
-    return { base: curva(m.base), medio: curva(m.medio), luz: curva(m.luz) };
-  });
-  const tw = H * 0.026;
-  const tronco = curva([[-tw * 1.8, 0], [-tw, -H * 0.1], [-tw * 0.8, -H * 0.28], [-tw * 0.9, fy], [tw * 0.9, fy], [tw * 0.8, -H * 0.28], [tw, -H * 0.1], [tw * 1.8, 0]], 0.6);
-  const ramas = puntas.map(([x, y]) => {
-    const w = tw * 0.75;
-    const mx = x * 0.45;
-    const my = fy + (y - fy) * 0.5 - H * 0.02;
-    return curva([[-w, fy + 4], [mx - w * 0.6, my], [x, y + 8], [mx + w * 0.6, my], [w, fy + 4]], 0.7);
-  });
-  const tl = curva([[-tw * 1.6, 0], [-tw * 0.95, -H * 0.1], [-tw * 0.75, -H * 0.28], [-tw * 0.8, fy], [-tw * 0.15, fy], [-tw * 0.15, -H * 0.28], [-tw * 0.3, -H * 0.1], [-tw * 0.4, 0]], 0.6);
-  return { tronco: [tronco, ...ramas].join(' '), tl, matas, otono };
+  matas.sort((a, b) => b.y - a.y); // de abajo hacia arriba: los pisos de arriba tapan a los de abajo
+  const cima = -H * 0.88;
+  const tronco = curva([[-tw * 1.9, 0], [-tw, -H * 0.1], [-tw * 0.75, -H * 0.35], [-tw * 0.4, cima], [tw * 0.4, cima], [tw * 0.75, -H * 0.35], [tw, -H * 0.1], [tw * 1.9, 0]], 0.6);
+  const tl = curva([[-tw * 1.7, 0], [-tw * 0.95, -H * 0.1], [-tw * 0.7, -H * 0.35], [-tw * 0.35, -H * 0.7], [-tw * 0.05, -H * 0.7], [-tw * 0.1, -H * 0.35], [-tw * 0.25, -H * 0.1], [-tw * 0.4, 0]], 0.6);
+  return { tronco: [tronco, ...ramas].join(' '), tl, matas };
 }
 
 function degradados(id) {
@@ -336,15 +345,12 @@ function generarArboles({ seed, ancho = ANCHO, alto = ALTO, cantidad = 40, hMin 
   if (ancho % paso !== 0) pts.push(`${ancho},${f(relieve(ancho))}`);
   const terreno = `M0,${alto} L${pts.join(' L')} L${ancho},${alto} Z`;
 
-  const conif = Array.from({ length: Math.max(1, variantes) }, () => coniferaVariante(rnd, 0.3 + rnd() * 0.16, detalle));
-  const lengas = latifoliados > 0 ? Array.from({ length: 4 }, (_, k) => lengaVariante(rnd, 0.62 + rnd() * 0.2, detalle, k % 3 === 0)) : [];
+  const conif = Array.from({ length: Math.max(1, variantes) }, () => coniferaVariante(rnd, 0.3 + rnd() * 0.22, detalle));
+  const lengas = latifoliados > 0 ? Array.from({ length: 4 }, (_, k) => lengaVariante(rnd, 0.6 + rnd() * 0.18, detalle)) : [];
   const defs = [
     degradados(id),
     ...conif.map((t, k) => `<g id="${id}-c${k}"><path class="sombra" d="${t.nucleo}"/><path class="tronco" d="${t.tronco}"/><path class="tl" d="${t.tl}"/>${capasDe(t.pisos, `c${t.tono}`)}</g>`),
-    ...lengas.map((t, k) => {
-      const o = t.otono ? ' o' : '';
-      return `<g id="${id}-l${k}"><path class="tronco${o}" d="${t.tronco}"/><path class="tl${o}" d="${t.tl}"/>${capasDe(t.matas, `c${o}`, o)}</g>`;
-    }),
+    ...lengas.map((t, k) => `<g id="${id}-l${k}"><path class="tronco" d="${t.tronco}"/><path class="tl" d="${t.tl}"/>${capasDe(t.matas, 'c')}</g>`),
   ].join('');
 
   const xs = Array.from({ length: cantidad }, () => rnd() * ancho).sort((a, b) => a - b);
@@ -433,14 +439,14 @@ export function capasEscena() {
       paths: [cordillera({ seed: 37, base: 0.1, amplitud: 0.16, rugosidad: 0.5 })],
       caras: '',
       nieve: '',
-      extra: arboles({ seed: 41, cantidad: 130, hMin: 90, hMax: 210, latifoliados: 0.14, detalle: 0.55, variantes: 7, id: 'bosque' }),
+      extra: arboles({ seed: 41, cantidad: 130, hMin: 90, hMax: 210, detalle: 0.55, variantes: 7, id: 'bosque' }),
     },
     {
       id: 'frente',
       paths: [],
       caras: '',
       nieve: '',
-      extra: arboles({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, latifoliados: 0.1, detalle: 1, variantes: 6, llano: { x: 1450, r: 260 }, id: 'frente' }) + cabana(1450, ALTO * 0.93),
+      extra: arboles({ seed: 53, cantidad: 34, hMin: 280, hMax: 540, suelo: 0.07, detalle: 1, variantes: 7, llano: { x: 1450, r: 260 }, id: 'frente' }) + cabana(1450, ALTO * 0.93),
     },
   ];
 }
